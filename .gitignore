@@ -2,5 +2,10 @@ build/
 .build/
 .out/
 out/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 *.dev*
+.vs
