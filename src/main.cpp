@@ -3,5 +3,5 @@
 int main()
 {
     const avUi::NetworkManagerUi *nmUi = new avUi::NetworkManagerUi();
-    nmUi->run();
+    nmUi->start();
 }

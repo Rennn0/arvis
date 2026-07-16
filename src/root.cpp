@@ -9,17 +9,17 @@ namespace avR
     {
     }
 
-    void AvRoot::log_info(const std::string_view msg) const
+    inline void AvRoot::log_info(const std::string_view msg) const noexcept
     {
         this->log_core(std::cout, "info", msg);
     }
 
-    void AvRoot::log_error(const std::string_view msg) const
+    void AvRoot::log_error(const std::string_view msg) const noexcept
     {
         this->log_core(std::cerr, "error", msg);
     }
 
-    void AvRoot::log_core(std::ostream &out, std::string_view level, std::string_view msg) const
+    void AvRoot::log_core(std::ostream &out, std::string_view level, std::string_view msg) const noexcept
     {
         out << '[' << level << ']' << '(' << this->m_name << ')' << msg << std::endl;
     }

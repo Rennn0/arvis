@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <av_root/root.hpp>
 
 namespace avNet
 {
@@ -56,6 +57,8 @@ namespace avNet
         http_result post(const char *url) const;
 
     private:
+        avR::AvRoot m_root;        
+
         /// @brief sends a request with the given method, writes the response
         ///        body into the responses folder, and returns the full result
         ///        (status, HTTP code, body, saved path) for display.
@@ -63,14 +66,5 @@ namespace avNet
         /// @param url target url
         /// @return full result of the request
         http_result fetch_core(request_method method, const char *url) const;
-
-        /// @brief
-        /// @param str
-        void print_info(const char *str) const;
-
-        /// @brief
-        /// @param str
-        void print_error(const char *str) const;
-        
     };
 }

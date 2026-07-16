@@ -21,7 +21,7 @@ namespace avUi
         /// @brief Opens the arvis GUI window and runs the event/render loop until
         ///        the user closes the window.
         /// @return process exit code (0 on clean exit, non-zero on init failure).
-        int run() const;
+        int start() const;
 
     private:
         avR::AvRoot m_root;

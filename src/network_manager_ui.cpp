@@ -33,7 +33,7 @@ namespace avUi
     {
     }
 
-    int NetworkManagerUi::run() const
+    int NetworkManagerUi::start() const
     {
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit())
