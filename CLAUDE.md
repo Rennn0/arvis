@@ -21,8 +21,9 @@ The networking is built on **libcurl**; the GUI on **Dear ImGui** (immediate-mod
 with a **GLFW + OpenGL3** backend.
 
 > Note: the project was previously named **maskj** and was renamed to **arvis**.
-> The git remote may still be `github.com/Rennn0/maskj` until the GitHub repo is
-> renamed (see §9). Do not reintroduce the `maskj` / `mj` names anywhere.
+> The GitHub repo and the local `origin` remote are now `github.com/Rennn0/arvis`
+> (the old `maskj` URL still works via GitHub's redirect). Do not reintroduce the
+> `maskj` / `mj` names anywhere.
 
 ---
 

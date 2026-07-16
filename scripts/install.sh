@@ -2,7 +2,7 @@
 # arvis installer — build from source and install (or run) the app.
 #
 # Usage (remote):
-#   curl -fsSL https://raw.githubusercontent.com/Rennn0/maskj/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Rennn0/arvis/main/scripts/install.sh | sh
 #
 # Pass flags through the pipe with `sh -s --`:
 #   curl -fsSL .../install.sh | sh -s -- --run
@@ -10,7 +10,7 @@
 #   curl -fsSL .../install.sh | sh -s -- --install-deps
 #
 # Or override behaviour with env vars:
-#   ARVIS_REPO   git URL to clone            (default: https://github.com/Rennn0/maskj.git)
+#   ARVIS_REPO   git URL to clone            (default: https://github.com/Rennn0/arvis.git)
 #   ARVIS_REF    branch/tag to build         (default: main)
 #   ARVIS_PREFIX install dir for the binary  (default: $HOME/.local/bin)
 #
@@ -25,7 +25,7 @@ set -eu
 
 # --- configuration (all overridable via env) --------------------------------
 APP="arvis"
-REPO_URL="${ARVIS_REPO:-https://github.com/Rennn0/maskj.git}"
+REPO_URL="${ARVIS_REPO:-https://github.com/Rennn0/arvis.git}"
 REF="${ARVIS_REF:-main}"
 PREFIX="${ARVIS_PREFIX:-$HOME/.local/bin}"
 BUILD_TYPE="${ARVIS_BUILD_TYPE:-Release}"
