@@ -1,8 +1,23 @@
-# arvis
+<p align="center">
+  <img src="assets/logo.svg" alt="arvis" width="360">
+</p>
 
-A cross-platform (Windows / Linux / macOS) C++20 desktop HTTP client and request inspector with a native GUI.
+<p align="center">
+  A cross-platform (Windows / Linux / macOS) C++20 desktop HTTP client and request inspector with a native GUI.
+</p>
 
-Built with [libcurl](https://curl.se/libcurl/), [Dear ImGui](https://github.com/ocornut/imgui), and [GLFW](https://www.glfw.org/) + OpenGL3.
+<p align="center">
+  <a href="https://github.com/Rennn0/arvis/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/Rennn0/arvis/release.yml?branch=main&label=build" alt="Build status"></a>
+  <a href="https://github.com/Rennn0/arvis/releases/latest"><img src="https://img.shields.io/github/v/release/Rennn0/arvis?label=release&sort=semver" alt="Latest release"></a>
+  <a href="https://github.com/Rennn0/arvis/releases"><img src="https://img.shields.io/github/downloads/Rennn0/arvis/total" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Rennn0/arvis" alt="License"></a>
+  <img src="https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white" alt="C++20">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-4c9bd4" alt="Platforms">
+</p>
+
+<p align="center">
+  Built with <a href="https://curl.se/libcurl/">libcurl</a>, <a href="https://github.com/ocornut/imgui">Dear ImGui</a>, and <a href="https://www.glfw.org/">GLFW</a> + OpenGL3.
+</p>
 
 ---
 
@@ -96,7 +111,3 @@ cmake --build --preset windows-debug    # or: windows-release
 ```
 
 ---
-
-## Releases
-
-Prebuilt binaries are published to [GitHub Releases](https://github.com/Rennn0/arvis/releases) by the [`release`](.github/workflows/release.yml) GitHub Actions workflow, which builds Linux, Windows, and macOS (arm64 + x64) binaries and attaches them to a tagged release.

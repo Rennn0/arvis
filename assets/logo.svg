@@ -1,0 +1,38 @@
+<svg width="440" height="120" viewBox="0 0 440 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="arvis">
+  <defs>
+    <linearGradient id="av-accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <style>
+      .av-frame { stroke: #94a3b8; }
+      .av-word  { fill: #0f172a; }
+      .av-dot   { fill: #cbd5e1; }
+      @media (prefers-color-scheme: dark) {
+        .av-frame { stroke: #475569; }
+        .av-word  { fill: #f1f5f9; }
+        .av-dot   { fill: #475569; }
+      }
+    </style>
+  </defs>
+
+  <!-- icon: app window with request / response arrows -->
+  <g transform="translate(14 14)">
+    <rect x="1" y="1" width="90" height="90" rx="20" class="av-frame" stroke-width="3"/>
+    <!-- title bar dots -->
+    <circle cx="20" cy="22" r="3.5" class="av-dot"/>
+    <circle cx="33" cy="22" r="3.5" class="av-dot"/>
+    <circle cx="46" cy="22" r="3.5" class="av-dot"/>
+    <!-- request arrow (out) -->
+    <path d="M22 50 H62" stroke="url(#av-accent)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M55 41 L66 50 L55 59" stroke="url(#av-accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- response arrow (in) -->
+    <path d="M70 70 H30" stroke="#22c55e" stroke-width="6" stroke-linecap="round"/>
+    <path d="M37 61 L26 70 L37 79" stroke="#22c55e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="124" y="76" class="av-word"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="58" font-weight="700" letter-spacing="-1">arvis</text>
+</svg>
