@@ -100,7 +100,10 @@ jobs:
   build-windows:
     needs: check
     if: needs.check.outputs.is_release == 'true'
-    runs-on: windows-latest
+    # Pinned to the VS-2022 image: the 'windows' preset hard-codes the
+    # "Visual Studio 17 2022" generator, which windows-latest (now the
+    # windows-2025 image) does not reliably expose to CMake.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
         with:
