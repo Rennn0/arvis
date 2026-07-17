@@ -131,28 +131,32 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # macOS builds -> arvis-macos-arm64 (Apple Silicon) + arvis-macos-x64 (Intel).
-  # No CMake preset exists for macOS, so configure directly with the vcpkg
-  # toolchain. vcpkg auto-detects the triplet from the runner's architecture.
+  # Both build on the arm64 runner: the x64 variant is cross-compiled (Apple
+  # clang targets x86_64, vcpkg builds the x64-osx triplet on the arm64 host).
+  # This avoids the scarce/retiring Intel (macos-13) runners. No CMake preset
+  # exists for macOS, so configure directly with the vcpkg toolchain.
   # ---------------------------------------------------------------------------
   build-macos:
     needs: check
     if: needs.check.outputs.is_release == 'true'
+    runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-14   # Apple Silicon (arm64)
+          - arch: arm64
+            triplet: arm64-osx
             asset: arvis-macos-arm64
-          - runner: macos-13   # Intel (x86_64)
+          - arch: x86_64
+            triplet: x64-osx
             asset: arvis-macos-x64
-    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: Install build tools
-        run: brew install pkg-config ninja
+        run: brew install pkg-config
 
       - name: Bootstrap vcpkg
         run: ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
@@ -161,6 +165,8 @@ jobs:
         run: |
           cmake -S . -B build/macos-release \
             -DCMAKE_TOOLCHAIN_FILE=external/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
