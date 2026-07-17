@@ -80,9 +80,6 @@ namespace avUi
         glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-        // Create hidden: we style the title bar dark before the first paint, then
-        // show the window in run() so the caption never flashes white.
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         this->width = mode->width;
         this->height = mode->height;
     }
@@ -133,10 +130,6 @@ namespace avUi
 
         std::shared_ptr<avR::UiComponent> root = std::make_shared<avR::AvDiv>("root", avR::AvDiv::Config{});
         this->setup_root(root);
-
-        // Everything (icon, dark caption, GL/ImGui state) is ready — reveal the
-        // window now so the dark title bar is the first thing the user sees.
-        glfwShowWindow(this->window);
 
         const double fps = 1. / 60.;
         double lastFrame = 0.;

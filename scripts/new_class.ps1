@@ -3,10 +3,10 @@
     Scaffold a new C++ class: header + source + CMake registration.
 
 .DESCRIPTION
-    Creates include/<Module>/<file>.hpp and src/<file>.cpp pre-filled with
-    #pragma once, the right namespace, a class skeleton, and the matching
-    #include, then inserts "src/<file>.cpp" into the add_executable(arvis ...)
-    list in CMakeLists.txt so you never forget to register it.
+    Creates include/<Module>/<file>.hpp and src/<Module>/<file>.cpp pre-filled
+    with #pragma once, the right namespace, a class skeleton, and the matching
+    #include, then inserts "src/<Module>/<file>.cpp" into the add_executable(arvis
+    ...) list in CMakeLists.txt so you never forget to register it.
 
     File base name is derived from the class name (PascalCase -> snake_case);
     the namespace is derived from the module (av_net -> avNet). Override either
@@ -14,11 +14,11 @@
 
 .EXAMPLE
     scripts/new_class.ps1 av_net Downloader
-    # -> include/av_net/downloader.hpp, src/downloader.cpp, namespace avNet
+    # -> include/av_net/downloader.hpp, src/av_net/downloader.cpp, namespace avNet
 
 .EXAMPLE
     scripts/new_class.ps1 av_root Root -Namespace avR
-    # -> include/av_root/root.hpp, src/root.cpp, namespace avR
+    # -> include/av_root/root.hpp, src/av_root/root.cpp, namespace avR
 #>
 [CmdletBinding()]
 param(
@@ -60,7 +60,7 @@ if (-not $FileName)  { $FileName  = ConvertTo-Snake $ClassName }
 if (-not $Namespace) { $Namespace = ConvertTo-Namespace $Module }
 
 $headerRel = "include/$Module/$FileName.hpp"
-$sourceRel = "src/$FileName.cpp"
+$sourceRel = "src/$Module/$FileName.cpp"
 $headerAbs = Join-Path $RepoRoot $headerRel
 $sourceAbs = Join-Path $RepoRoot $sourceRel
 $cmakeAbs  = Join-Path $RepoRoot 'CMakeLists.txt'
@@ -106,6 +106,7 @@ namespace $Namespace
 "@
 
 New-Item -ItemType Directory -Force -Path (Split-Path $headerAbs) | Out-Null
+New-Item -ItemType Directory -Force -Path (Split-Path $sourceAbs) | Out-Null
 Set-Content -Path $headerAbs -Value $header -Encoding utf8
 Set-Content -Path $sourceAbs -Value $source -Encoding utf8
 Write-Host "created  $headerRel"

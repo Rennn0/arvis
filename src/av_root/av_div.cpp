@@ -7,7 +7,7 @@
 namespace avR
 {
     AvDiv::AvDiv(std::string id, Config config)
-        : UiComponent(std::move(id)), config(config)
+        : UiContainerComponent(std::move(id)), config(config)
     {
     }
 

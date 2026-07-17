@@ -79,13 +79,14 @@ target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
 
 add_executable(arvis
     src/main.cpp
-    src/network_manager_ui.cpp
-    src/network_manager.cpp
-    src/root.cpp
-    src/ui_component.cpp
-    src/av_button.cpp
-    src/av_custom.cpp
-    src/av_div.cpp
+    src/av_net/network_manager.cpp
+    src/av_ui/network_manager_ui.cpp
+    src/av_root/root.cpp
+    src/av_root/av_button.cpp
+    src/av_root/av_custom.cpp
+    src/av_root/av_div.cpp
+    src/av_root/ui_component.cpp
+    src/av_root/ui_container_component.cpp
 )
 
 target_include_directories(arvis PRIVATE

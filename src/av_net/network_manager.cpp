@@ -1,7 +1,7 @@
 #include <av_net/network_manager.hpp>
 
 namespace
-{
+{   
     constexpr const char *RESPONSES_DIR = "responses.dev";
 
     std::string sanitize_for_filename(const char *url)

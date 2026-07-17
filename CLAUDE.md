@@ -71,15 +71,16 @@ arvis/
 │       ├── av_button.hpp         # AvButton leaf
 │       └── av_custom.hpp         # AvCustom callback leaf
 │
-├── src/                          # implementations
+├── src/                          # implementations — mirrors include/, one folder per module
 │   ├── main.cpp                  # entry point -> constructs avUi::NetworkManagerUi, calls run()
-│   ├── network_manager.cpp       # libcurl wrapper
-│   ├── network_manager_ui.cpp    # GLFW + ImGui window + event loop
-│   ├── root.cpp                  # AvRoot logging impl
-│   ├── ui_component.cpp          # UiComponent impl (in progress)
-│   ├── av_div.cpp                # AvDiv impl
-│   ├── av_button.cpp             # AvButton impl
-│   └── av_custom.cpp             # AvCustom impl
+│   ├── av_net/network_manager.cpp       # libcurl wrapper
+│   ├── av_ui/network_manager_ui.cpp     # GLFW + ImGui window + event loop
+│   └── av_root/
+│       ├── root.cpp              # AvRoot logging impl
+│       ├── ui_component.cpp      # UiComponent impl (in progress)
+│       ├── av_div.cpp            # AvDiv impl
+│       ├── av_button.cpp         # AvButton impl
+│       └── av_custom.cpp         # AvCustom callback leaf
 │
 ├── scripts/                      # dev tooling
 │   ├── new_class.ps1             # class scaffolder (Windows / PowerShell)
@@ -216,8 +217,10 @@ into ImGui calls and fires callbacks inline. Do not rebuild the tree every frame
 ## 6. Coding conventions
 
 - **Files:** one class per header/source. Header `include/<module>/<snake_case>.hpp`,
-  source `src/<snake_case>.cpp`. File base name is the class name converted
-  PascalCase→snake_case (`NetworkManagerUi` → `network_manager_ui`).
+  source `src/<module>/<snake_case>.cpp` — `src/` mirrors `include/` with the same
+  per-module folders (the sole exception is `main.cpp`, which stays at `src/`'s top
+  level). File base name is the class name converted PascalCase→snake_case
+  (`NetworkManagerUi` → `network_manager_ui`).
 - **Namespaces:** `av` + module, as in §5. Match casing exactly everywhere
   (declaration and definition) or you get unresolved-symbol link errors.
 - **Includes:** angle-bracket module paths, e.g. `#include <av_net/network_manager.hpp>`
@@ -264,8 +267,8 @@ scripts/new_class.sh av_root UiElement --namespace avR
 
 Both scripts:
 1. create `include/<module>/<file>.hpp` (with `#pragma once`, namespace, class skeleton),
-2. create `src/<file>.cpp` (with the matching `#include` + ctor/dtor stubs),
-3. insert `src/<file>.cpp` into the `add_executable(arvis ...)` list in `CMakeLists.txt`.
+2. create `src/<module>/<file>.cpp` (with the matching `#include` + ctor/dtor stubs),
+3. insert `src/<module>/<file>.cpp` into the `add_executable(arvis ...)` list in `CMakeLists.txt`.
 
 They derive the namespace from the module (`av_net`→`avNet`) and the filename from the
 class (PascalCase→snake_case); override with `-Namespace`/`--namespace` for the

@@ -2,10 +2,10 @@
 #
 # Scaffold a new C++ class: header + source + CMake registration.
 #
-# Creates include/<module>/<file>.hpp and src/<file>.cpp pre-filled with
+# Creates include/<module>/<file>.hpp and src/<module>/<file>.cpp pre-filled with
 # #pragma once, the right namespace, a class skeleton, and the matching
-# #include, then inserts "src/<file>.cpp" into the add_executable(arvis ...)
-# list in CMakeLists.txt.
+# #include, then inserts "src/<module>/<file>.cpp" into the add_executable(arvis
+# ...) list in CMakeLists.txt.
 #
 # File base name is derived from the class name (PascalCase -> snake_case);
 # the namespace is derived from the module (av_net -> avNet). Override either
@@ -70,7 +70,7 @@ if [[ -z "$namespace" ]]; then
 fi
 
 header_rel="include/$module/$filename.hpp"
-source_rel="src/$filename.cpp"
+source_rel="src/$module/$filename.cpp"
 header_abs="$repo_root/$header_rel"
 source_abs="$repo_root/$source_rel"
 cmake_abs="$repo_root/CMakeLists.txt"
@@ -102,6 +102,7 @@ EOF
 echo "created  $header_rel"
 
 # --- source ------------------------------------------------------------------
+mkdir -p "$(dirname "$source_abs")"
 cat >"$source_abs" <<EOF
 #include <$module/$filename.hpp>
 
