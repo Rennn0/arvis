@@ -5,5 +5,12 @@
   "files.associations": {
     "*.h": "cpp",
     "*.hpp": "cpp"
-  }
+  },
+  "[cpp]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_style": "file",
+  "C_Cpp.clang_format_sortIncludes": false
 }

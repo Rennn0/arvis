@@ -2,8 +2,7 @@
 
 namespace avR
 {
-    UiContainerComponent::UiContainerComponent(std::string label) : UiComponent(label),
-                                                                    label(std::move(label))
+    UiContainerComponent::UiContainerComponent(std::string id) : UiComponent(id)
     {
     }
 

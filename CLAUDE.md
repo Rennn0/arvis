@@ -268,7 +268,12 @@ scripts/new_class.sh av_root UiElement --namespace avR
 Both scripts:
 1. create `include/<module>/<file>.hpp` (with `#pragma once`, namespace, class skeleton),
 2. create `src/<module>/<file>.cpp` (with the matching `#include` + ctor/dtor stubs),
-3. insert `src/<module>/<file>.cpp` into the `add_executable(arvis ...)` list in `CMakeLists.txt`.
+3. insert `src/<module>/<file>.cpp` into the `add_executable(arvis ...)` list in `CMakeLists.txt`,
+4. insert `include/<module>/<file>.hpp` into the `target_sources(arvis PRIVATE ...)` list — so the
+   header shows up (and is editable) in the generated Visual Studio / IDE project, not just the source.
+
+Both CMake insertions are idempotent (re-running skips entries already present) and each warns without
+failing if its block is missing.
 
 They derive the namespace from the module (`av_net`→`avNet`) and the filename from the
 class (PascalCase→snake_case); override with `-Namespace`/`--namespace` for the

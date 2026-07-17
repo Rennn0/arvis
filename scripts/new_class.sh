@@ -4,8 +4,10 @@
 #
 # Creates include/<module>/<file>.hpp and src/<module>/<file>.cpp pre-filled with
 # #pragma once, the right namespace, a class skeleton, and the matching
-# #include, then inserts "src/<module>/<file>.cpp" into the add_executable(arvis
-# ...) list in CMakeLists.txt.
+# #include, then registers both in CMakeLists.txt: the .cpp into the
+# add_executable(arvis ...) list (so it compiles) and the .hpp into the
+# target_sources(arvis PRIVATE ...) list (so it shows up in the generated
+# Visual Studio / IDE project).
 #
 # File base name is derived from the class name (PascalCase -> snake_case);
 # the namespace is derived from the module (av_net -> avNet). Override either
@@ -119,35 +121,50 @@ namespace $namespace
 EOF
 echo "created  $source_rel"
 
-# --- register the .cpp in add_executable(<target> ...) -----------------------
-entry="    $source_rel"
+# --- register in CMakeLists.txt ----------------------------------------------
+# The .cpp goes into add_executable(<target> ...) so it gets compiled; the .hpp
+# goes into target_sources(<target> PRIVATE ...) so it shows up (and is
+# editable) in the generated Visual Studio / IDE project. Both are inserted the
+# same way: find the opening "<block>(<target>" line, then insert just before
+# the line that closes it (a lone ')').
 
-if grep -qF "$entry" "$cmake_abs"; then
-    echo "CMake    already lists $source_rel (skipped)"
-    exit 0
-fi
+# register_in_block <block> <entry> <rel-path>
+# Idempotent; leaves the file untouched (with a warning) if the block is absent.
+register_in_block() {
+    local block="$1" entry="$2" rel="$3"
 
-tmp="$(mktemp)"
-awk -v target="$target" -v entry="$entry" '
-    BEGIN { inside = 0; done = 0 }
-    {
-        if ($0 ~ "add_executable\\([ \t]*" target "([ \t]|$)") inside = 1
-        if (inside && !done && $0 ~ /^[ \t]*\)[ \t]*$/) {
-            print entry
-            inside = 0
-            done = 1
+    if grep -qF "$entry" "$cmake_abs"; then
+        echo "CMake    already lists $rel (skipped)"
+        return 0
+    fi
+
+    local tmp
+    tmp="$(mktemp)"
+    awk -v block="$block" -v target="$target" -v entry="$entry" '
+        BEGIN { inside = 0; done = 0 }
+        {
+            if ($0 ~ block "\\([ \t]*" target "([ \t]|$)") inside = 1
+            if (inside && !done && $0 ~ /^[ \t]*\)[ \t]*$/) {
+                print entry
+                inside = 0
+                done = 1
+            }
+            print
         }
-        print
-    }
-' "$cmake_abs" >"$tmp"
+    ' "$cmake_abs" >"$tmp"
 
-# The entry is present in $tmp only if awk found the block and inserted it.
-if grep -qF "$entry" "$tmp"; then
-    mv "$tmp" "$cmake_abs"
-    echo "CMake    registered $source_rel in add_executable($target ...)"
-    echo ""
-    echo "Done. Reconfigure to pick it up:  cmake --preset linux-debug"
-else
-    rm -f "$tmp"
-    echo "warning: could not find add_executable($target ...); add '$source_rel' manually." >&2
-fi
+    # The entry is present in $tmp only if awk found the block and inserted it.
+    if grep -qF "$entry" "$tmp"; then
+        mv "$tmp" "$cmake_abs"
+        echo "CMake    registered $rel in $block($target ...)"
+    else
+        rm -f "$tmp"
+        echo "warning: could not find $block($target ...); add '$rel' manually." >&2
+    fi
+}
+
+register_in_block "add_executable" "    $source_rel" "$source_rel"
+register_in_block "target_sources" "    $header_rel" "$header_rel"
+
+echo ""
+echo "Done. Reconfigure to pick it up:  cmake --preset linux-debug"

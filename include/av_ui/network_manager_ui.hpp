@@ -7,7 +7,7 @@
 #include <av_net/network_manager.hpp>
 #include <av_root/root.hpp>
 #include <av_root/ui_component.hpp>
-#include <av_ui/av_request.hpp>
+#include <av_root/av_request.hpp>
 
 namespace avUi
 {
@@ -26,15 +26,13 @@ namespace avUi
         void run();
 
     private:
+		const double fps;
         int width;
         int height;
         avR::AvRoot avRoot;
         GLFWwindow *window;
         GLFWmonitor *monitor;
 
-        std::vector<AvRequest> requests; ///< user-created requests (sidebar list)
-        int selectedRequest = -1;        ///< index into requests, -1 = none
-        int nextRequestId = 1;           ///< sequential id for display names
         float fontScale = 1.5f;          ///< ImGui FontGlobalScale (app-wide text size)
 
         void check_keyboard_events();

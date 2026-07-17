@@ -1,0 +1,5 @@
+# Everything under external/ is third-party (the vcpkg submodule + fetched deps).
+# clang-format searches upward for the nearest config, so this sentinel makes it
+# leave every vendored file untouched — even if an editor's format-on-save fires
+# while browsing a vcpkg/ImGui header. Never reformat external code.
+DisableFormat: true

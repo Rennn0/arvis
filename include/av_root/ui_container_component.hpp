@@ -29,27 +29,20 @@ namespace avR
             // every child except the last; dragging it resizes that child along
             // the main axis (left/right for Horizontal, up/down for Vertical).
             bool resizable = false;          ///< place draggable dividers between children
-            float splitter_thickness = 6.0f; ///< divider hit/draw thickness in px
+            float splitter_thickness = 3.0f; ///< divider hit/draw thickness in px
             float resize_min = 40.0f;        ///< min extent of a resized child
             float resize_max = 0.0f;         ///< max extent (0 => unlimited)
+
+			std::vector<float> extents; ///< per-child main-axis size (resizable only)
+			float extentsScale = 1.0f;   ///< FontGlobalScale used when extents were last set
+			ImVec2 layoutSize = ImVec2(0.0f, 0.0f); ///< size imposed by a resizable parent this frame
+			bool hasLayoutSize = false;
         };
-        // // Navy
-        // ImVec4(0.05f, 0.08f, 0.18f, 1.0f);
-
-        // // Slate blue
-        // ImVec4(0.10f, 0.14f, 0.24f, 1.0f);
-
-        // // Steel blue (slightly brighter)
-        // ImVec4(0.15f, 0.22f, 0.35f, 1.0f);
-
-        // // Very dark blue
-        // ImVec4(0.03f, 0.05f, 0.10f, 1.0f);
     public:
-        explicit UiContainerComponent(std::string label);
+        explicit UiContainerComponent(std::string id);
         UiContainerComponent() = delete;
         ~UiContainerComponent();
 
     private:
-        std::string label;
     };
 } // namespace avR

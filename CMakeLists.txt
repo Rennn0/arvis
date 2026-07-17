@@ -69,6 +69,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}
@@ -87,6 +88,28 @@ add_executable(arvis
     src/av_root/av_div.cpp
     src/av_root/ui_component.cpp
     src/av_root/ui_container_component.cpp
+    src/av_root/av_state.cpp
+    src/av_root/ui_statefull_component.cpp
+    src/av_ui/request_list_ui.cpp
+    src/av_ui/detailed_request_view_ui.cpp
+)
+
+target_sources(arvis PRIVATE
+    include/av_net/network_manager.hpp
+    include/av_ui/network_manager_ui.hpp
+    include/av_ui/logo_icon.hpp
+    include/av_root/root.hpp
+    include/av_root/im_scope.hpp
+    include/av_root/ui_component.hpp
+    include/av_root/ui_container_component.hpp
+    include/av_root/av_div.hpp
+    include/av_root/av_button.hpp
+    include/av_root/av_custom.hpp
+    include/av_root/av_request.hpp
+    include/av_root/av_state.hpp
+    include/av_root/ui_statefull_component.hpp
+    include/av_ui/request_list_ui.hpp
+    include/av_ui/detailed_request_view_ui.hpp
 )
 
 target_include_directories(arvis PRIVATE
@@ -95,12 +118,13 @@ target_include_directories(arvis PRIVATE
 
 target_link_libraries(arvis PRIVATE CURL::libcurl imgui)
 
-# Make Visual Studio open 'arvis' as the startup project instead of ALL_BUILD
+get_target_property(arvis_all_sources arvis SOURCES)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${arvis_all_sources})
+
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT arvis)
 
 if(MSVC)
     target_compile_options(arvis PRIVATE /W4)
-    # ImGui is third-party; don't hold it to our warning level.
     target_compile_options(imgui PRIVATE /W1)
 else()
     target_compile_options(arvis PRIVATE -Wall -Wextra -Wpedantic)

@@ -25,9 +25,5 @@ namespace avR
         void layout_children();
 
         Config config;
-        std::vector<float> extents;             ///< per-child current main-axis size (resizable)
-        float extentsScale = 1.0f;              ///< FontGlobalScale used when extents were last set
-        ImVec2 layoutSize = ImVec2(0.0f, 0.0f); ///< size imposed by a resizable parent this frame
-        bool hasLayoutSize = false;
     };
 } // namespace avR

@@ -1,0 +1,53 @@
+# clang-format configuration for arvis.
+#
+# Style derived from the existing code base (see CLAUDE.md §6 "Coding
+# conventions"). Picked up automatically by Visual Studio 2022, VS Code
+# (ms-vscode.cpptools), clangd, CLion/Rider and the scripts/format.* helpers.
+#
+# external/ is third-party and must never be reformatted — a .clang-format
+# with "DisableFormat: true" lives in external/ to guarantee that.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++20
+
+# --- indentation -------------------------------------------------------------
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4        # `public:`/`private:` outdent one level
+NamespaceIndentation: All       # namespace bodies are indented
+IndentCaseLabels: false         # `case` aligns with its `switch`
+IndentPPDirectives: None        # nested #ifdef/#define stay at column 0
+
+# --- braces ------------------------------------------------------------------
+BreakBeforeBraces: Allman       # opening brace always on its own line
+
+# --- line length & alignment -------------------------------------------------
+ColumnLimit: 120
+AlignAfterOpenBracket: Align    # wrapped call args align under the "("
+ReflowComments: true
+
+# --- pointers / references ---------------------------------------------------
+PointerAlignment: Right         # `const char *p`, `AvDiv &configure`
+ReferenceAlignment: Right
+
+# --- single-line collapsing --------------------------------------------------
+# in-class one-liners stay on one line (see im_scope.hpp ScopedId); out-of-line
+# and empty bodies keep their braces on separate lines (see AvDiv ctor).
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortLambdasOnASingleLine: All
+
+# --- includes ----------------------------------------------------------------
+SortIncludes: false             # preserve the deliberate "own header first" order
+
+# --- misc --------------------------------------------------------------------
+FixNamespaceComments: true      # keep/append the `} // namespace avR` trailer
+SpaceAfterCStyleCast: false
+SpacesBeforeTrailingComments: 1
+MaxEmptyLinesToKeep: 1

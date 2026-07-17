@@ -5,8 +5,10 @@
 .DESCRIPTION
     Creates include/<Module>/<file>.hpp and src/<Module>/<file>.cpp pre-filled
     with #pragma once, the right namespace, a class skeleton, and the matching
-    #include, then inserts "src/<Module>/<file>.cpp" into the add_executable(arvis
-    ...) list in CMakeLists.txt so you never forget to register it.
+    #include, then registers both in CMakeLists.txt: the .cpp goes into the
+    add_executable(arvis ...) list (so it compiles) and the .hpp into the
+    target_sources(arvis PRIVATE ...) list (so it shows up in the generated
+    Visual Studio / IDE project) — so you never forget to register either.
 
     File base name is derived from the class name (PascalCase -> snake_case);
     the namespace is derived from the module (av_net -> avNet). Override either
@@ -112,42 +114,62 @@ Set-Content -Path $sourceAbs -Value $source -Encoding utf8
 Write-Host "created  $headerRel"
 Write-Host "created  $sourceRel"
 
-# --- register the .cpp in add_executable(<Target> ...) -----------------------
-$lines = Get-Content $cmakeAbs
-$entry = "    $sourceRel"
+# --- register in CMakeLists.txt ----------------------------------------------
+# The .cpp goes into add_executable(<Target> ...) so it gets compiled; the .hpp
+# goes into target_sources(<Target> PRIVATE ...) so it shows up (and is
+# editable) in the generated Visual Studio / IDE project. Both lists are edited
+# the same way: find the opening "<block>(<Target>" line, then insert just
+# before the line that closes it (a lone ')').
 
-if ($lines -contains $entry) {
-    Write-Host "CMake    already lists $sourceRel (skipped)"
-    return
-}
+# Insert "$Entry" into the "<BlockName>(<Target> ...)" list. Idempotent; warns
+# and returns the input array unchanged if the block can't be located.
+function Add-ToCMakeBlock {
+    param(
+        [string[]] $Lines,
+        [string]   $BlockName,
+        [string]   $Target,
+        [string]   $Entry,
+        [string]   $Rel
+    )
 
-# Find the add_executable(<Target> line, then the next line that is just ')'.
-$startIdx = -1
-for ($i = 0; $i -lt $lines.Count; $i++) {
-    if ($lines[$i] -match "add_executable\(\s*$([regex]::Escape($Target))\b") {
-        $startIdx = $i
-        break
+    if ($Lines -contains $Entry) {
+        Write-Host "CMake    already lists $Rel (skipped)"
+        return $Lines
     }
-}
-if ($startIdx -lt 0) {
-    Write-Warning "Could not find add_executable($Target ...) in CMakeLists.txt; add '$sourceRel' manually."
-    return
+
+    $startIdx = -1
+    for ($i = 0; $i -lt $Lines.Count; $i++) {
+        if ($Lines[$i] -match "$([regex]::Escape($BlockName))\(\s*$([regex]::Escape($Target))\b") {
+            $startIdx = $i
+            break
+        }
+    }
+    if ($startIdx -lt 0) {
+        Write-Warning "Could not find $BlockName($Target ...) in CMakeLists.txt; add '$Rel' manually."
+        return $Lines
+    }
+
+    $closeIdx = -1
+    for ($i = $startIdx; $i -lt $Lines.Count; $i++) {
+        if ($Lines[$i].Trim() -eq ')') { $closeIdx = $i; break }
+    }
+    if ($closeIdx -lt 0) {
+        Write-Warning "Could not find end of $BlockName($Target ...); add '$Rel' manually."
+        return $Lines
+    }
+
+    $updated = @()
+    $updated += $Lines[0..($closeIdx - 1)]
+    $updated += $Entry
+    $updated += $Lines[$closeIdx..($Lines.Count - 1)]
+    Write-Host "CMake    registered $Rel in $BlockName($Target ...)"
+    return $updated
 }
 
-$closeIdx = -1
-for ($i = $startIdx; $i -lt $lines.Count; $i++) {
-    if ($lines[$i].Trim() -eq ')') { $closeIdx = $i; break }
-}
-if ($closeIdx -lt 0) {
-    Write-Warning "Could not find end of add_executable($Target ...); add '$sourceRel' manually."
-    return
-}
+$lines = Get-Content $cmakeAbs
+$lines = Add-ToCMakeBlock -Lines $lines -BlockName 'add_executable' -Target $Target -Entry "    $sourceRel" -Rel $sourceRel
+$lines = Add-ToCMakeBlock -Lines $lines -BlockName 'target_sources'  -Target $Target -Entry "    $headerRel" -Rel $headerRel
+Set-Content -Path $cmakeAbs -Value $lines -Encoding utf8
 
-$updated = @()
-$updated += $lines[0..($closeIdx - 1)]
-$updated += $entry
-$updated += $lines[$closeIdx..($lines.Count - 1)]
-Set-Content -Path $cmakeAbs -Value $updated -Encoding utf8
-Write-Host "CMake    registered $sourceRel in add_executable($Target ...)"
 Write-Host ""
 Write-Host "Done. Reconfigure to pick it up:  cmake --preset windows"

@@ -1,4 +1,6 @@
 #include <av_ui/network_manager_ui.hpp>
+#include <av_ui/request_list_ui.hpp>
+#include <av_ui/detailed_request_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
 #include <av_root/av_button.hpp>
 #include <av_root/av_custom.hpp>
@@ -29,37 +31,8 @@
 
 namespace avUi
 {
-    const char *status_text(avNet::response_status s)
-    {
-        switch (s)
-        {
-        case avNet::response_status::Ok:
-            return "Ok";
-        case avNet::response_status::Failed:
-            return "Failed";
-        case avNet::response_status::Canceled:
-            return "Canceled";
-        }
-        return "Unknown";
-    }
-
-    const char *method_text(avNet::request_method m)
-    {
-        switch (m)
-        {
-        case avNet::request_method::get:
-            return "GET";
-        case avNet::request_method::post:
-            return "POST";
-        }
-        return "Unknown";
-    }
-
-    NetworkManagerUi::NetworkManagerUi() : width(0),
-                                           height(0),
-                                           avRoot("NetworkManagerUI"),
-                                           window(nullptr),
-                                           monitor(nullptr)
+    NetworkManagerUi::NetworkManagerUi()
+        : fps(1. / 60.), width(0), height(0), avRoot("NetworkManagerUI"), window(nullptr), monitor(nullptr)
     {
         if (!glfwInit())
         {
@@ -103,10 +76,10 @@ namespace avUi
             throw std::runtime_error("glfw create window failed");
         }
 
-        GLFWimage icons[avUi::logo_icon_count];
+        GLFWimage icons[avUi::logo_icon_count]{};
+
         for (int i = 0; i < avUi::logo_icon_count; ++i)
-            icons[i] = GLFWimage{avUi::logo_icon_images[i].width,
-                                 avUi::logo_icon_images[i].height,
+            icons[i] = GLFWimage{avUi::logo_icon_images[i].width, avUi::logo_icon_images[i].height,
                                  avUi::logo_icon_images[i].pixels};
         glfwSetWindowIcon(this->window, avUi::logo_icon_count, icons);
 
@@ -131,15 +104,14 @@ namespace avUi
         std::shared_ptr<avR::UiComponent> root = std::make_shared<avR::AvDiv>("root", avR::AvDiv::Config{});
         this->setup_root(root);
 
-        const double fps = 1. / 60.;
         double lastFrame = 0.;
         while (!glfwWindowShouldClose(this->window))
         {
-            glfwWaitEventsTimeout(fps);
+            glfwWaitEventsTimeout(this->fps);
 
             double now = glfwGetTime();
             double delta = now - lastFrame;
-            if (delta < fps)
+            if (delta < this->fps)
                 continue;
             lastFrame = now;
 
@@ -239,106 +211,69 @@ namespace avUi
     void NetworkManagerUi::setup_root(std::shared_ptr<avR::UiComponent> &root)
     {
         using Dir = avR::AvDiv::Direction;
-        {
-            avR::AvDiv::Config conf;
-            conf.direction = Dir::Vertical;
-            conf.size = ImVec2(0, 0);
-            conf.padding = ImVec2(0, 0); // no inset on the whole layout
-            conf.spacing = 20.f;
-            conf.border = false;
-            std::static_pointer_cast<avR::AvDiv>(root)->configure(conf);
-        }
+        std::shared_ptr<avUi::RequstListViewUi::RequestListState> requestListState =
+            std::make_shared<avUi::RequstListViewUi::RequestListState>();
+        avR::AvDiv::Config conf;
+        avR::AvButton::Style style;
 
-        {
-            avR::AvDiv::Config conf;
-            conf.direction = Dir::Horizontal;
-            conf.size = ImVec2(0, 44);
-            conf.padding = ImVec2(16.0f, 0.0f);
-            conf.spacing = 8.f;
-            conf.background = ImVec4(0.10f, 0.11f, 0.13f, 1.0f);
-            conf.border = false;
-            avR::UiComponent *header = root->add_child(std::make_unique<avR::AvDiv>("header", conf));
+        conf.direction = Dir::Vertical;
+        conf.size = ImVec2(0, 0);
+        conf.padding = ImVec2(0, 0); // no inset on the whole layout
+        conf.spacing = 20.f;
+        conf.border = false;
+        std::static_pointer_cast<avR::AvDiv>(root)->configure(conf);
 
-            // Quiet toolbar action — soft fill, no border, auto-sized to label.
-            avR::AvButton::Style style;
-            style.size = ImVec2(0.0f, 0.0f);
-            style.padding = ImVec2(14.0f, 5.0f);
-            style.background = ImVec4(0.18f, 0.20f, 0.24f, 1.0f);
-            style.hovered = ImVec4(0.24f, 0.28f, 0.34f, 1.0f);
-            style.active = ImVec4(0.14f, 0.16f, 0.20f, 1.0f);
-            style.text = ImVec4(0.90f, 0.92f, 0.95f, 1.0f);
-            style.rounding = 4.f;
-            style.border = 0.f;
-            avR::UiComponent *addBtn =
-                header->add_child(std::make_unique<avR::AvButton>("new request", style));
-            addBtn->set_on_click([this]
-                                 {
-                                     AvRequest req;
-                                     req.id = this->nextRequestId++;
-                                     this->requests.push_back(std::move(req));
-                                     // focus the new entry right away
-                                     this->selectedRequest = static_cast<int>(this->requests.size()) - 1; });
-        }
+        conf = {};
+        conf.direction = Dir::Horizontal;
+        conf.size = ImVec2(0, 44);
+        conf.padding = ImVec2(16.0f, 0.0f);
+        conf.spacing = 8.f;
+        conf.background = ImVec4(0.10f, 0.11f, 0.13f, 1.0f);
+        conf.border = false;
+        avR::UiComponent *header = root->add_child(std::make_unique<avR::AvDiv>("header", conf));
 
-        {
-            avR::AvDiv::Config conf;
-            conf.direction = Dir::Horizontal;
-            conf.size = ImVec2(0, 0);
-            conf.padding = ImVec2(0, 0);
-            conf.spacing = 0.f;
-            conf.resizable = true; // draggable divider between sidebar and mid
-            conf.splitter_thickness = 6.f;
-            conf.resize_min = 150.f; // sidebar can't shrink below this
-            conf.resize_max = 500.f; // ...or grow past this
-            avR::UiComponent *body = root->add_child(std::make_unique<avR::AvDiv>("body", conf));
+        style.size = ImVec2(0.0f, 0.0f);
+        style.padding = ImVec2(14.0f, 5.0f);
+        style.background = ImVec4(0.18f, 0.20f, 0.24f, 1.0f);
+        style.hovered = ImVec4(0.24f, 0.28f, 0.34f, 1.0f);
+        style.active = ImVec4(0.14f, 0.16f, 0.20f, 1.0f);
+        style.text = ImVec4(0.90f, 0.92f, 0.95f, 1.0f);
+        style.rounding = 4.f;
+        style.border = 0.f;
+        avR::UiComponent *addBtn = header->add_child(std::make_unique<avR::AvButton>("new request", style));
+        addBtn->set_on_click(
+            [state = requestListState]
+            {
+                avR::AvRequest req;
+                req.id = state->next_request_id++;
+                state->requests.push_back(std::move(req));
+                // focus the new entry right away
+                state->selected_request_index = state->requests.size() - 1;
+            });
 
-            conf = {};
-            conf.direction = Dir::Vertical;
-            conf.size = ImVec2(220, 0);
-            conf.border = true;
-            avR::UiComponent *sidebar = body->add_child(std::make_unique<avR::AvDiv>("sidebar", conf));
-            sidebar->add_child(std::make_unique<avR::AvCustom>(
-                "request_list", [this]
-                {
-                    ImGui::TextDisabled("requests");
-                    ImGui::Separator();
-                    for (int i = 0; i < static_cast<int>(this->requests.size()); ++i)
-                    {
-                        ImGui::PushID(i);
-                        const std::string label = this->requests[i].display_name();
-                        if (ImGui::Selectable(label.c_str(), this->selectedRequest == i))
-                        {
-                            this->selectedRequest = i;
-                        }
-                        ImGui::PopID();
-                    }
-                    if (this->requests.empty())
-                    {
-                        ImGui::TextDisabled("(empty — New request)");
-                    } }));
+        conf = {};
+        conf.direction = Dir::Horizontal;
+        conf.size = ImVec2(0, 0);
+        conf.padding = ImVec2(0, 0);
+        conf.spacing = 0.f;
+        conf.resizable = true; // draggable divider between sidebar and mid
+        conf.splitter_thickness = 6.f;
+        conf.resize_min = 150.f; // sidebar can't shrink below this
+        conf.resize_max = 500.f; // ...or grow past this
+        avR::UiComponent *body = root->add_child(std::make_unique<avR::AvDiv>("body", conf));
 
-            conf = {};
-            conf.size = ImVec2(0, 0);
-            conf.background = ImVec4(0.09f, 0.10f, 0.12f, 1.0f);
-            avR::UiComponent *mid = body->add_child(std::make_unique<avR::AvDiv>("mid", conf));
-            // Detail pane for whichever request is selected in the sidebar.
-            mid->add_child(std::make_unique<avR::AvCustom>(
-                "request_details", [this]
-                {
-                    if (this->selectedRequest < 0 ||
-                        this->selectedRequest >= static_cast<int>(this->requests.size()))
-                    {
-                        ImGui::TextDisabled("select a request from the sidebar");
-                        return;
-                    }
+        conf = {};
+        conf.direction = Dir::Vertical;
+        conf.size = ImVec2(220, 0);
+        conf.border = true;
+        avR::UiComponent *sidebar = body->add_child(std::make_unique<avR::AvDiv>("sidebar", conf));
+        sidebar->add_child(std::make_unique<avUi::RequstListViewUi>(requestListState, "request_list"));
 
-                    const AvRequest &req = this->requests[this->selectedRequest];
-                    ImGui::Text("%s", req.display_name().c_str());
-                    ImGui::Separator();
-                    ImGui::Text("id:     %d", req.id);
-                    ImGui::Text("method: %s", method_text(req.method));
-                    ImGui::Text("url:    %s", req.url.c_str());
-                    ImGui::Text("body:   %s", req.body.empty() ? "(empty)" : req.body.c_str()); }));
-        }
+        conf = {};
+        conf.size = ImVec2(0, 0);
+        conf.background = ImVec4(0.09f, 0.10f, 0.12f, 1.0f);
+        avR::UiComponent *mid = body->add_child(std::make_unique<avR::AvDiv>("mid", conf));
+        // Detail pane for whichever request is selected in the sidebar.
+        mid->add_child(std::make_unique<avUi::DetailedRequestViewUi>(requestListState,"request_details"));
     }
-}
+} // namespace avUi

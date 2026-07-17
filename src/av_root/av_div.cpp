@@ -19,8 +19,8 @@ namespace avR
 
     void AvDiv::set_layout_size(const ImVec2 &size)
     {
-        this->layoutSize = size;
-        this->hasLayoutSize = true;
+        this->config.layoutSize = size;
+        this->config.hasLayoutSize = true;
     }
 
     ImVec2 AvDiv::preferred_size() const
@@ -48,7 +48,7 @@ namespace avR
         // A resizable parent may have imposed a size on us this frame; otherwise
         // fall back to the configured size ((0,0) => fill available space).
         // Imposed sizes are already in screen px; config sizes are design units.
-        const ImVec2 size = this->hasLayoutSize ? this->layoutSize : scale_size(this->config.size);
+        const ImVec2 size = this->config.hasLayoutSize ? this->config.layoutSize : scale_size(this->config.size);
 
         if (ImGui::BeginChild(get_id().c_str(), size, childFlags))
         {
@@ -57,7 +57,7 @@ namespace avR
         ImGui::EndChild();
 
         // The imposed size lasts a single frame; the parent re-applies it each draw.
-        this->hasLayoutSize = false;
+        this->config.hasLayoutSize = false;
     }
 
     void AvDiv::layout_children()
@@ -100,22 +100,22 @@ namespace avR
         // --- resizable: each leading child gets a stored main-axis extent plus
         //     a draggable splitter on its trailing edge; the last child fills.
         //     Seed extents once from each child's preferred size.
-        if (this->extents.size() != kids.size())
+        if (this->config.extents.size() != kids.size())
         {
-            this->extents.assign(kids.size(), 0.0f);
+            this->config.extents.assign(kids.size(), 0.0f);
             for (std::size_t i = 0; i < kids.size(); ++i)
             {
                 const ImVec2 pref = kids[i]->preferred_size();
-                this->extents[i] = horizontal ? pref.x : pref.y;
+                this->config.extents[i] = horizontal ? pref.x : pref.y;
             }
-            this->extentsScale = s;
+            this->config.extentsScale = s;
         }
-        else if (this->extentsScale > 0.0f && this->extentsScale != s)
+        else if (this->config.extentsScale > 0.0f && this->config.extentsScale != s)
         {
-            const float ratio = s / this->extentsScale;
-            for (float &extent : this->extents)
+            const float ratio = s / this->config.extentsScale;
+            for (float &extent : this->config.extents)
                 extent *= ratio;
-            this->extentsScale = s;
+            this->config.extentsScale = s;
         }
 
         bool first = true;
@@ -139,8 +139,8 @@ namespace avR
             }
 
             // Leading child: pin its main-axis extent, let the cross axis fill.
-            kids[i]->set_layout_size(horizontal ? ImVec2(this->extents[i], 0.0f)
-                                                : ImVec2(0.0f, this->extents[i]));
+            kids[i]->set_layout_size(horizontal ? ImVec2(this->config.extents[i], 0.0f)
+                                                : ImVec2(0.0f, this->config.extents[i]));
             kids[i]->draw();
 
             // Draggable splitter on the trailing edge.
@@ -166,16 +166,16 @@ namespace avR
                                                  : ImGuiMouseCursor_ResizeNS);
 
             if (ImGui::IsItemActive())
-                this->extents[i] += horizontal ? ImGui::GetIO().MouseDelta.x
+                this->config.extents[i] += horizontal ? ImGui::GetIO().MouseDelta.x
                                            : ImGui::GetIO().MouseDelta.y;
 
             // Clamp to the configured min/max (design units → screen px).
             const float resizeMin = scale_px(this->config.resize_min);
             const float resizeMax = scale_px(this->config.resize_max);
-            if (this->extents[i] < resizeMin)
-                this->extents[i] = resizeMin;
-            if (resizeMax > 0.0f && this->extents[i] > resizeMax)
-                this->extents[i] = resizeMax;
+            if (this->config.extents[i] < resizeMin)
+                this->config.extents[i] = resizeMin;
+            if (resizeMax > 0.0f && this->config.extents[i] > resizeMax)
+                this->config.extents[i] = resizeMax;
         }
     }
 } // namespace avR

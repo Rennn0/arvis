@@ -1,8 +1,9 @@
 #pragma once
 
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 #include <GLFW/glfw3.h>
 #include <functional>
@@ -95,10 +96,7 @@ namespace avR
         /// @brief Read access to the child list for layout components that need to
         ///        position children themselves (e.g. horizontal rows). Named
         ///        get_children() so the data member can simply be `children`.
-        const std::vector<std::unique_ptr<UiComponent>> &get_children() const noexcept
-        {
-            return this->children;
-        }
+        const std::vector<std::unique_ptr<UiComponent>> &get_children() const noexcept { return this->children; }
 
     private:
         // Declared before `id`: the ctor copies the id into root's name, then

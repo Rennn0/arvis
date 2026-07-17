@@ -26,6 +26,11 @@ namespace avNet
     {
         get,
         post,
+        put,
+        patch,
+        del,
+        head,
+        options
     };
 
     /// @brief full outcome of a request: status plus the fetched body and,
@@ -41,6 +46,43 @@ namespace avNet
     /// @brief abstractions over some http methods, uses libcurl
     class NetworkManager
     {
+    public:
+        static const char *status_text(avNet::response_status s)
+        {
+            switch (s)
+            {
+            case avNet::response_status::Ok:
+                return "Ok";
+            case avNet::response_status::Failed:
+                return "Failed";
+            case avNet::response_status::Canceled:
+                return "Canceled";
+            }
+            return "Unknown";
+        }
+
+        static const char *method_text(avNet::request_method m)
+        {
+            switch (m)
+            {
+            case avNet::request_method::get:
+                return "GET";
+            case avNet::request_method::post:
+                return "POST";
+            case avNet::request_method::put:
+                return "Put";
+            case avNet::request_method::patch:
+                return "Patch";
+            case avNet::request_method::head:
+                return "Head";
+            case avNet::request_method::options:
+                return "Options";
+            case avNet::request_method::del:
+                return "Delete";
+            }
+            return "Unknown";
+        }
+
     public:
         /// @brief global init
         NetworkManager();
@@ -67,4 +109,4 @@ namespace avNet
         /// @return full result of the request
         http_result fetch_core(request_method method, const char *url) const;
     };
-}
+} // namespace avNet
