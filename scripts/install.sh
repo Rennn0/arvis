@@ -26,6 +26,7 @@ set -eu
 # --- configuration (all overridable via env) --------------------------------
 APP="arvis"
 REPO_URL="${ARVIS_REPO:-https://github.com/Rennn0/arvis.git}"
+SLUG="${ARVIS_SLUG:-Rennn0/arvis}"   # owner/repo, for release-download URLs
 REF="${ARVIS_REF:-main}"
 PREFIX="${ARVIS_PREFIX:-$HOME/.local/bin}"
 BUILD_TYPE="${ARVIS_BUILD_TYPE:-Release}"
@@ -33,7 +34,9 @@ BUILD_TYPE="${ARVIS_BUILD_TYPE:-Release}"
 MODE="install"     # install | run
 INSTALL_DEPS=0
 KEEP_BUILD=0
+FROM_SOURCE=0      # 1 = skip the prebuilt download and always build
 SRC=""             # set once we have a work dir; used by cleanup()
+BIN=""             # path to the binary to install/run
 
 # --- pretty logging (only colorize when stderr is a terminal) ---------------
 if [ -t 2 ]; then
@@ -50,9 +53,15 @@ usage() {
     cat >&2 <<EOF
 arvis installer
 
-  --run             build and run without installing
+  By default this downloads a prebuilt release binary. It only builds from
+  source if no prebuilt binary is available (e.g. macOS) or --from-source is
+  given.
+
+  --run             download/build and run without installing
+  --from-source     always build from source, skip the prebuilt download
   --prefix DIR      install the binary here (default: $HOME/.local/bin)
-  --ref REF         git branch or tag to build (default: main)
+  --ref REF         release tag to download, or git branch/tag to build
+                    (default: main -> latest release)
   --install-deps    install system build dependencies via the detected package
                     manager (needs sudo); otherwise missing deps just print a hint
   --keep-build      do not delete the temporary build directory on exit
@@ -64,6 +73,7 @@ EOF
 while [ $# -gt 0 ]; do
     case "$1" in
         --run)          MODE="run" ;;
+        --from-source)  FROM_SOURCE=1 ;;
         --prefix)       PREFIX="${2:?--prefix needs a directory}"; shift ;;
         --ref)          REF="${2:?--ref needs a value}"; shift ;;
         --install-deps) INSTALL_DEPS=1 ;;
@@ -89,7 +99,20 @@ OS="$(uname -s)"
 case "$OS" in
     Linux)  PLATFORM="linux" ;;
     Darwin) PLATFORM="macos" ;;
-    *)      die "unsupported OS '$OS'. On Windows, build with the 'windows' CMake preset (see CLAUDE.md §4)." ;;
+    *)      die "unsupported OS '$OS'. On Windows, use scripts/install.ps1 (see README)." ;;
+esac
+
+# Prebuilt release asset published by the GitHub Actions release workflow.
+# Empty means "no prebuilt for this arch" -> fall back to a source build.
+case "$PLATFORM" in
+    linux)  ASSET="arvis-linux-x64" ;;
+    macos)
+        case "$(uname -m)" in
+            arm64|aarch64) ASSET="arvis-macos-arm64" ;;
+            x86_64)        ASSET="arvis-macos-x64" ;;
+            *)             ASSET="" ;;
+        esac
+        ;;
 esac
 
 PKG=""
@@ -140,6 +163,30 @@ check_tools() {
         printf "  or re-run with --install-deps to do it automatically.\n" >&2
     fi
     die "prerequisites not satisfied."
+}
+
+# --- prebuilt download ------------------------------------------------------
+# Try to fetch a published release binary. Returns 0 and sets BIN on success,
+# 1 on any failure (so the caller falls back to a source build).
+download_prebuilt() {
+    [ -n "$ASSET" ] || { info "no prebuilt binary for $PLATFORM — building from source"; return 1; }
+
+    if [ "$REF" = "main" ]; then
+        url="https://github.com/$SLUG/releases/latest/download/$ASSET"
+    else
+        url="https://github.com/$SLUG/releases/download/$REF/$ASSET"
+    fi
+
+    SRC="$(mktemp -d "${TMPDIR:-/tmp}/arvis-install.XXXXXX")"
+    BIN="$SRC/$APP"
+    info "downloading prebuilt $APP ($ASSET) ..."
+    if curl -fL --retry 2 -o "$BIN" "$url"; then
+        chmod +x "$BIN"
+        return 0
+    fi
+    warn "no prebuilt binary at $url — building from source instead"
+    rm -rf "$SRC"; SRC=""; BIN=""
+    return 1
 }
 
 # --- build steps ------------------------------------------------------------
@@ -206,11 +253,16 @@ do_run() {
 
 # --- main -------------------------------------------------------------------
 info "arvis installer ($PLATFORM)"
-maybe_install_deps
-check_tools
-fetch_sources
-bootstrap_vcpkg
-build
+
+# Prefer a prebuilt release binary; build from source only if that's
+# unavailable or the user asked for it with --from-source.
+if [ "$FROM_SOURCE" -eq 1 ] || ! download_prebuilt; then
+    maybe_install_deps
+    check_tools
+    fetch_sources
+    bootstrap_vcpkg
+    build
+fi
 
 if [ "$MODE" = "run" ]; then
     do_run

@@ -8,7 +8,7 @@ Built with [libcurl](https://curl.se/libcurl/), [Dear ImGui](https://github.com/
 
 ## Quick install
 
-Each installer clones the repo, builds a Release binary from source, and installs it to `~/.local/bin` (override with the flags below).
+Each installer downloads the latest [prebuilt release binary](https://github.com/Rennn0/arvis/releases) for your platform (Linux x64, Windows x64, macOS arm64/x64) and installs it to `~/.local/bin` — no compiler or dependencies required. If no prebuilt binary matches, it falls back to building from source.
 
 **Linux / macOS**
 
@@ -20,26 +20,29 @@ Pass flags through the pipe with `sh -s --`:
 
 | Flag | Effect |
 |------|--------|
-| `--run` | Build and launch without installing |
-| `--install-deps` | Install system build dependencies via the detected package manager |
+| `--run` | Download/build and launch without installing |
+| `--from-source` | Always build from source instead of downloading |
 | `--prefix DIR` | Install the binary to `DIR` (default: `$HOME/.local/bin`) |
+| `--install-deps` | Install system build dependencies (only needed for a source build) |
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Rennn0/arvis/main/scripts/install.sh | sh -s -- --install-deps --run
+curl -fsSL https://raw.githubusercontent.com/Rennn0/arvis/main/scripts/install.sh | sh -s -- --run
 ```
 
-**Windows** (PowerShell) — requires Visual Studio 2022 with the "Desktop development with C++" workload:
+**Windows** (PowerShell)
 
 ```powershell
 irm https://raw.githubusercontent.com/Rennn0/arvis/main/scripts/install.ps1 | iex
 ```
 
-To pass flags (`-Run`, `-Prefix DIR`, `-Ref BRANCH`), download the script first:
+To pass flags (`-Run`, `-FromSource`, `-Prefix DIR`, `-Ref TAG`), download the script first:
 
 ```powershell
 $s = irm https://raw.githubusercontent.com/Rennn0/arvis/main/scripts/install.ps1
 & ([scriptblock]::Create($s)) -Run
 ```
+
+> A source build (the fallback, or `--from-source` / `-FromSource`) needs the [build prerequisites](#1-prerequisites) below.
 
 ---
 
@@ -93,3 +96,7 @@ cmake --build --preset windows-debug    # or: windows-release
 ```
 
 ---
+
+## Releases
+
+Prebuilt binaries are published to [GitHub Releases](https://github.com/Rennn0/arvis/releases) by the [`release`](.github/workflows/release.yml) GitHub Actions workflow, which builds Linux, Windows, and macOS (arm64 + x64) binaries and attaches them to a tagged release.

@@ -1,0 +1,200 @@
+name: release
+
+# Publishes prebuilt binaries so the install scripts can download them instead
+# of building from source.
+#
+# Trigger: a push to main whose head-commit message contains "release v<X.Y.Z>"
+# (case-insensitive). The captured version becomes the release tag. You can also
+# trigger a release manually from the Actions tab (workflow_dispatch) by giving a
+# version explicitly.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, e.g. v1.2.3'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Decide whether this run is a release and what the version tag is.
+  # ---------------------------------------------------------------------------
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.detect.outputs.is_release }}
+      version: ${{ steps.detect.outputs.version }}
+    steps:
+      - name: Detect release
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            version="$INPUT_VERSION"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "manual release: $version"
+          elif printf '%s' "$MSG" | grep -qiE 'release[[:space:]]+v[0-9]'; then
+            # Capture the first vX.Y.Z-style token after "release".
+            version=$(printf '%s' "$MSG" | grep -oiE 'v[0-9]+(\.[0-9]+)*' | head -n1)
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "commit release: $version"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "not a release commit — skipping build/publish"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Linux build -> arvis-linux-x64
+  # ---------------------------------------------------------------------------
+  build-linux:
+    needs: check
+    if: needs.check.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build build-essential pkg-config \
+            curl zip unzip tar \
+            libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev
+
+      - name: Bootstrap vcpkg
+        run: ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Configure
+        run: cmake --preset linux-release
+
+      - name: Build
+        run: cmake --build --preset linux-release
+
+      - name: Stage binary
+        run: |
+          mkdir -p dist
+          cp build/linux-release/arvis dist/arvis-linux-x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arvis-linux-x64
+          path: dist/arvis-linux-x64
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Windows build -> arvis-windows-x64.exe
+  # ---------------------------------------------------------------------------
+  build-windows:
+    needs: check
+    if: needs.check.outputs.is_release == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Bootstrap vcpkg
+        run: .\external\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+
+      - name: Configure
+        run: cmake --preset windows
+
+      - name: Build
+        run: cmake --build --preset windows-release
+
+      - name: Stage binary
+        run: |
+          mkdir dist
+          copy build\windows\Release\arvis.exe dist\arvis-windows-x64.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arvis-windows-x64
+          path: dist/arvis-windows-x64.exe
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # macOS builds -> arvis-macos-arm64 (Apple Silicon) + arvis-macos-x64 (Intel).
+  # No CMake preset exists for macOS, so configure directly with the vcpkg
+  # toolchain. vcpkg auto-detects the triplet from the runner's architecture.
+  # ---------------------------------------------------------------------------
+  build-macos:
+    needs: check
+    if: needs.check.outputs.is_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14   # Apple Silicon (arm64)
+            asset: arvis-macos-arm64
+          - runner: macos-13   # Intel (x86_64)
+            asset: arvis-macos-x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: brew install pkg-config ninja
+
+      - name: Bootstrap vcpkg
+        run: ./external/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Configure
+        run: |
+          cmake -S . -B build/macos-release \
+            -DCMAKE_TOOLCHAIN_FILE=external/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/macos-release --config Release -j
+
+      - name: Stage binary
+        run: |
+          mkdir -p dist
+          cp build/macos-release/arvis dist/${{ matrix.asset }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Collect artifacts and publish the GitHub release (creates the tag).
+  # ---------------------------------------------------------------------------
+  release:
+    needs: [check, build-linux, build-windows, build-macos]
+    if: needs.check.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check.outputs.version }}
+          name: arvis ${{ needs.check.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/arvis-linux-x64
+            dist/arvis-windows-x64.exe
+            dist/arvis-macos-arm64
+            dist/arvis-macos-x64
