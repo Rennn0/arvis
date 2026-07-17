@@ -1,18 +1,17 @@
 #include <av_root/ui_component.hpp>
-#include <av_root/im_scope.hpp>
 
 namespace avR
 {
-    UiComponent::UiComponent(std::string id) : root(id), id(std::move(id))
+    UiComponent::UiComponent(std::string id) : style(avR::UiScopedStyle::Style{}), root(id), id(id)
     {
     }
 
     void UiComponent::draw()
     {
-        // Every node draws inside its own ID scope; render() is free to emit
-        // widgets with any label without risking collisions with siblings.
-        ScopedId idScope(this);
+        ImGui::PushID(this->id.c_str());
+        avR::UiScopedStyle scoped(this->style);
         render();
+        ImGui::PopID();
     }
 
     UiComponent *UiComponent::add_child(std::unique_ptr<UiComponent> child)

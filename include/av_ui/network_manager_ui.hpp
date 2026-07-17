@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 #include <av_net/network_manager.hpp>
-#include <av_root/root.hpp>
 #include <av_root/ui_component.hpp>
+#include <av_root/root.hpp>
 #include <av_root/av_request.hpp>
 
 namespace avUi
@@ -26,17 +26,13 @@ namespace avUi
         void run();
 
     private:
-		const double fps;
+        const double fps;
         int width;
         int height;
         avR::AvRoot avRoot;
         GLFWwindow *window;
         GLFWmonitor *monitor;
 
-        float fontScale = 1.5f;          ///< ImGui FontGlobalScale (app-wide text size)
-
         void check_keyboard_events();
-        void setup_menu();
-        void setup_root(std::shared_ptr<avR::UiComponent> &root);
     };
-}
+} // namespace avUi

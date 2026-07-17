@@ -1,11 +1,12 @@
 #pragma once
 
-#include <av_root/ui_statefull_component.hpp>
+#include <av_root/ui_component.hpp>
 #include <av_root/av_request.hpp>
+#include <av_root/av_state.hpp>
 
 namespace avUi
 {
-    class RequstListViewUi : public avR::UiStatefullComponent
+    class RequstListViewUi : public avR::UiComponent
     {
     public:
         struct RequestListState : avR::AvState
@@ -15,8 +16,9 @@ namespace avUi
             std::string display_name;
             std::vector<avR::AvRequest> requests;
         };
+
     public:
-        explicit RequstListViewUi(std::shared_ptr<avR::AvState>statePtr,std::string id);
+        explicit RequstListViewUi(std::string id);
         ~RequstListViewUi();
 
     private:
