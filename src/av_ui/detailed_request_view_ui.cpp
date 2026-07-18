@@ -4,6 +4,12 @@ namespace avUi
 {
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id) : avR::UiComponent(std::move(id))
     {
+        this->windowFlags = ImGuiWindowFlags_NoCollapse;
+    }
+
+    DetailedRequestViewUi::DetailedRequestViewUi(std::string id, avR::AvState *sharedState) : DetailedRequestViewUi(id)
+    {
+        this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -12,7 +18,12 @@ namespace avUi
 
     void DetailedRequestViewUi::render()
     {
-        ImGui::Begin(this->get_id().c_str());
+        if (this->shared_state && !this->shared_state->show_req_detailed_view)
+            return;
+
+        if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->windowFlags))
+        {
+        }
         ImGui::End();
     }
 } // namespace avUi

@@ -67,6 +67,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
@@ -89,6 +90,7 @@ add_executable(arvis
     src/av_ui/root_ui.cpp
     src/av_ui/request_list_view_ui.cpp
     src/av_ui/detailed_request_view_ui.cpp
+    src/av_root/av_inter_view_shared_state.cpp
 )
 
 target_include_directories(arvis PRIVATE

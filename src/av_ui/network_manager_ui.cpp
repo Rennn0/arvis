@@ -72,6 +72,10 @@ namespace avUi
             throw std::runtime_error("glfw create window failed");
         }
 
+        glfwMakeContextCurrent(this->window);
+        glfwMaximizeWindow(this->window);
+        glfwSwapInterval(1);
+
         GLFWimage icons[avUi::logo_icon_count]{};
 
         for (int i = 0; i < avUi::logo_icon_count; ++i)
@@ -86,10 +90,6 @@ namespace avUi
             DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDark, sizeof(useDark));
         }
 #endif
-
-        glfwMakeContextCurrent(this->window);
-        glfwMaximizeWindow(this->window);
-        glfwSwapInterval(1);
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -117,10 +117,6 @@ namespace avUi
             rootUi->draw();
             ImGui::Render();
 
-            int w, h;
-            glfwGetFramebufferSize(window, &w, &h);
-            glViewport(0, 0, w, h);
-            glClearColor(0.07f, 0.07f, 0.09f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             glfwSwapBuffers(window);
