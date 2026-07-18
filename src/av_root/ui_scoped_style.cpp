@@ -6,17 +6,20 @@ namespace avR
 
     UiScopedStyle::UiScopedStyle(const Style &style) : style_count(0)
     {
-        if (style.window_rounding.has_value())
+        auto push = [this](ImGuiStyleVar idx, const auto &opt)
         {
-            style_count++;
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, *style.window_rounding);
-        }
+            if (opt.has_value())
+            {
+                ImGui::PushStyleVar(idx, *opt);
+                ++this->style_count;
+            }
+        };
 
-        if (style.window_border_size.has_value())
-        {
-            style_count++;
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, *style.window_border_size);
-        }
+        push(ImGuiStyleVar_WindowRounding, style.window_rounding);
+        push(ImGuiStyleVar_WindowPadding, style.window_padding);
+        push(ImGuiStyleVar_WindowBorderSize, style.window_border_size);
+        push(ImGuiStyleVar_FrameRounding, style.frame_rounding);
+        push(ImGuiStyleVar_FramePadding, style.frame_padding);
     }
 
     UiScopedStyle::~UiScopedStyle()

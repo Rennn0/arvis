@@ -91,6 +91,7 @@ add_executable(arvis
     src/av_ui/request_list_view_ui.cpp
     src/av_ui/detailed_request_view_ui.cpp
     src/av_root/av_inter_view_shared_state.cpp
+    src/av_root/av_request_list_state.cpp
 )
 
 target_include_directories(arvis PRIVATE

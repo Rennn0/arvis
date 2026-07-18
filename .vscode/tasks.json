@@ -11,6 +11,20 @@
         "isDefault": true
       },
       "detail": "Build the arvis target with the active CMake preset"
+    },
+    {
+      "type": "shell",
+      "label": "watch",
+      "command": "${workspaceFolder}/scripts/watch.sh",
+      "args": ["linux-debug"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "detail": "Rebuild + relaunch arvis on every source save (watch mode)"
     }
   ]
 }

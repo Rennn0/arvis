@@ -1,6 +1,7 @@
 #pragma once
 
 #include <av_root/av_state.hpp>
+#include <av_root/av_request.hpp>
 namespace avR
 {
     class AvInterViewSharedState : public AvState
@@ -8,6 +9,7 @@ namespace avR
     public:
         bool show_req_list_view;
         bool show_req_detailed_view;
+        const AvRequest *display_request;
 
     public:
         AvInterViewSharedState();

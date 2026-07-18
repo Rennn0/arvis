@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include <imgui.h>
 
 namespace avR
 {
@@ -10,6 +11,9 @@ namespace avR
         {
             std::optional<float> window_rounding;
             std::optional<float> window_border_size;
+            std::optional<ImVec2> window_padding;
+            std::optional<float> frame_rounding;
+            std::optional<ImVec2> frame_padding;
         };
 
     public:

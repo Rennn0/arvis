@@ -12,6 +12,11 @@ namespace avUi
         ImGuiStyle &style = ImGui::GetStyle();
         style.WindowRounding = 5.f;
         style.WindowBorderSize = 0.f;
+        style.FrameRounding = 8.f;
+        style.FramePadding = ImVec2(10, 6);
+
+        ImGuiIO& io = ImGui::GetIO();
+        // io.FontGlobalScale = 1.2f;
 
         this->add_child(std::make_unique<avUi::RequstListViewUi>("req_list_view", this->inter_view_state.get()));
         this->add_child(std::make_unique<avUi::DetailedRequestViewUi>("detailed_view", this->inter_view_state.get()));

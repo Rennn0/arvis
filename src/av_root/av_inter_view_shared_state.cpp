@@ -2,7 +2,8 @@
 
 namespace avR
 {
-    AvInterViewSharedState::AvInterViewSharedState() : show_req_list_view(true), show_req_detailed_view(true)
+    AvInterViewSharedState::AvInterViewSharedState()
+        : show_req_list_view(true), show_req_detailed_view(true), display_request(nullptr)
     {
     }
 

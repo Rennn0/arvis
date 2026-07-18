@@ -23,6 +23,9 @@ namespace avUi
 
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->windowFlags))
         {
+            ImGui::Checkbox("x", &this->shared_state->show_req_list_view);
+
+            ImGui::ShowStyleEditor();
         }
         ImGui::End();
     }
