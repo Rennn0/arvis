@@ -13,9 +13,15 @@ namespace avUi
         ~DetailedRequestViewUi();
 
     private:
+        float footer_height;
+
         void render() override;
 
         ImGuiWindowFlags windowFlags;
         avR::AvInterViewSharedState *shared_state;
+
+        void render_header(const ImGuiStyle &style);
+        void render_main_content(const ImGuiStyle &style);
+        void render_footer(const ImGuiStyle &style);
     };
 } // namespace avUi

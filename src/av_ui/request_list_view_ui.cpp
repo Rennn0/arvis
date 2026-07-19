@@ -1,6 +1,9 @@
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
 
+#include <ranges>
+#include <chrono>
+
 namespace avUi
 {
     RequstListViewUi::RequstListViewUi(std::string id) : avR::UiComponent(std::move(id))
@@ -17,11 +20,37 @@ namespace avUi
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
         this->request_list_state = std::make_shared<avR::AvRequestListState>();
         this->request_list_state->environment = "Development";
-        // this->request_list_state->requests.reserve(10);
-        this->request_list_state->requests.push_back(avR::AvRequest{.id = 1, .title = "get products"});
-        this->request_list_state->requests.push_back(avR::AvRequest{.id = 2, .title = "post product"});
-        this->request_list_state->requests.push_back(avR::AvRequest{.id = 3, .title = "delete product"});
-        this->request_list_state->requests.push_back(avR::AvRequest{.id = 4, .title = "healthcheck"});
+        this->request_list_state->requests.reserve(40);
+        this->request_list_state->requests.push_back(avR::AvRequest{
+            .id = 1,
+            .timestamp = 5000,
+            .method = avNet::request_method::get,
+            .title = "get products",
+        });
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 2, .timestamp = 5000, .method = avNet::request_method::get, .title = "post product"});
+        this->request_list_state->requests.push_back(avR::AvRequest{
+            .id = 3, .timestamp = 5000, .method = avNet::request_method::get, .title = "delete product"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 4, .timestamp = 5000, .method = avNet::request_method::get, .title = "healthcheck"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 5, .timestamp = 5000, .method = avNet::request_method::get, .title = "get products"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 6, .timestamp = 5000, .method = avNet::request_method::get, .title = "post product"});
+        this->request_list_state->requests.push_back(avR::AvRequest{
+            .id = 7, .timestamp = 5000, .method = avNet::request_method::get, .title = "delete product"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 8, .timestamp = 5000, .method = avNet::request_method::get, .title = "healthcheck"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 9, .timestamp = 5000, .method = avNet::request_method::get, .title = "get products"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 10, .timestamp = 5000, .method = avNet::request_method::get, .title = "post product"});
+        this->request_list_state->requests.push_back(avR::AvRequest{
+            .id = 11, .timestamp = 5000, .method = avNet::request_method::get, .title = "delete product"});
+        this->request_list_state->requests.push_back(
+            avR::AvRequest{.id = 12, .timestamp = 5000, .method = avNet::request_method::get, .title = "healthcheck"});
+
+        this->shared_state->display_request = &this->request_list_state->requests.front();
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -73,14 +102,21 @@ namespace avUi
         ImGui::TextDisabled("env:");
         ImGui::SameLine();
         const char *env = this->request_list_state->environment.c_str();
-        ImGui::TextColored(ImColor(8, 249, 24), env);
+        ImGui::TextColored(ImColor(8, 249, 24), "%s", env);
 
         const char *addLabel = "+";
-        const float addLabelButtonWidth = ImGui::CalcTextSize(addLabel).x + style.FramePadding.x * 2.f;
+        const float addLabelButtonWidth = ImGui::CalcTextSize(addLabel).x + style.FramePadding.x * 3.f;
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - addLabelButtonWidth);
         if (ImGui::Button(addLabel))
         {
+            const int64_t lastId = this->request_list_state->requests.back().id;
+            using namespace std::chrono;
+            this->request_list_state->requests.push_back(avR::AvRequest{
+                .id = lastId + 1,
+                .timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count(),
+            });
+            this->shared_state->display_request = &this->request_list_state->requests.back();
         }
         ImGui::SetItemTooltip("add request");
 
@@ -101,12 +137,37 @@ namespace avUi
             {
                 const float itemHeight =
                     ImGui::GetTextLineHeight() * 2 + style.ItemSpacing.y + style.FramePadding.y * 2;
-                for (const avR::AvRequest &request : this->request_list_state->requests)
+                const avR::AvRequest *selected = this->shared_state->display_request;
+
+                ImGui::Dummy(ImVec2(0.0f, 5.0f));
+                ImGui::Indent(12.f);
+                ImGui::TextDisabled("Today");
+                ImGui::Unindent(12.f);
+                ImGui::Dummy(ImVec2(0.0f, 5.0f));
+                for (const avR::AvRequest &request :
+                     this->request_list_state->requests |
+                         std::views::filter([](const avR::AvRequest &r) { return r.id < 5; }))
                 {
                     ImGui::PushID(request.id);
-                    if (ImGui::Selectable(request.display_name().c_str(),
-                                          this->shared_state->display_request &&
-                                              request.id == this->shared_state->display_request->id,
+                    if (ImGui::Selectable(request.display_name().c_str(), selected && request.id == selected->id,
+                                          ImGuiSelectableFlags_None, ImVec2(0, itemHeight)))
+                    {
+                        this->shared_state->display_request = &request;
+                    }
+                    ImGui::PopID();
+                }
+
+                ImGui::Dummy(ImVec2(0.0f, 5.0f));
+                ImGui::Indent(12.f);
+                ImGui::TextDisabled("Yesterday");
+                ImGui::Unindent(12.f);
+                ImGui::Dummy(ImVec2(0.0f, 5.0f));
+                for (const avR::AvRequest &request :
+                     this->request_list_state->requests |
+                         std::views::filter([](avR::AvRequest &r) { return r.id >= 5; }))
+                {
+                    ImGui::PushID(request.id);
+                    if (ImGui::Selectable(request.display_name().c_str(), selected && request.id == selected->id,
                                           ImGuiSelectableFlags_None, ImVec2(0, itemHeight)))
                     {
                         this->shared_state->display_request = &request;
@@ -135,12 +196,13 @@ namespace avUi
         ImGui::Text("%d saved", savedReqCountMock);
 
         const char *envLabel = "env";
-        const float envLabelButtonWidth = ImGui::CalcTextSize(envLabel).x + style.FramePadding.x * 2.f;
+        const float envLabelButtonWidth = ImGui::CalcTextSize(envLabel).x + style.FramePadding.x * 3.f;
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - envLabelButtonWidth);
 
         if (ImGui::Button(envLabel))
         {
         }
+        ImGui::SetItemTooltip("modify environment variables");
     }
 } // namespace avUi

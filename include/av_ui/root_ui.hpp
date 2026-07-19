@@ -15,5 +15,11 @@ namespace avUi
 
         const ImGuiViewport *viewport;
         std::shared_ptr<avR::AvState> inter_view_state;
+
+        ImFont *FontCousine;
+        ImFont *FontCousineLarge;
+        ImFont *FontRoboto;
+        ImFont *FontRobotoLarge;
+        ImFont *FontDefault;
     };
 } // namespace avUi
