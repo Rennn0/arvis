@@ -13,6 +13,7 @@
 #include <vector>
 #include <av_root/root.hpp>
 #include <av_root/ui_scoped_style.hpp>
+#include <av_net/network_manager.hpp>
 
 namespace avR
 {
@@ -21,9 +22,11 @@ namespace avR
     class UiComponent
     {
 
-    public:
-        const ImVec4 http_method_color = ImColor(8, 249, 24);
+    public: // helpers
         const ImVec4 environment_color = ImColor(8, 249, 24);
+
+        ImVec4 get_method_color(const avNet::request_method &method);
+        ImVec4 get_status_color(const int code);
 
     public:
         UiComponent(const UiComponent &) = delete;

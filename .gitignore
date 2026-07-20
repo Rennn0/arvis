@@ -10,3 +10,4 @@ out/
 !.vscode/tasks.json
 *.dev*
 .vs
+*.db

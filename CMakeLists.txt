@@ -62,6 +62,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+# --- Sqlite --------------------------------------------------------------
+FetchContent_Declare(
+    SQLiteCpp
+    GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
+    GIT_TAG 3.3.2
+)
+FetchContent_MakeAvailable(SQLiteCpp)
+
 add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -92,13 +100,15 @@ add_executable(arvis
     src/av_ui/detailed_request_view_ui.cpp
     src/av_root/av_inter_view_shared_state.cpp
     src/av_root/av_request_list_state.cpp
+    src/av_s/av_storage.cpp
+    src/av_s/av_request_storage.cpp
 )
 
 target_include_directories(arvis PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(arvis PRIVATE CURL::libcurl imgui)
+target_link_libraries(arvis PRIVATE CURL::libcurl imgui SQLiteCpp)
 
 get_target_property(arvis_all_sources arvis SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${arvis_all_sources})

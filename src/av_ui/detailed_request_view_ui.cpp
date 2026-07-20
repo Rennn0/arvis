@@ -29,6 +29,17 @@ namespace avUi
 
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->window_flags))
         {
+            if (!this->shared_state->display_request)
+            {
+                const char *msg = "No request selected";
+                const ImVec2 avail = ImGui::GetContentRegionAvail();
+                const ImVec2 sz = ImGui::CalcTextSize(msg);
+                ImGui::SetCursorPos(ImVec2((avail.x - sz.x) * .5f, (avail.y - sz.y) * .5f));
+                ImGui::TextDisabled("%s", msg);
+                ImGui::End();
+                return;
+            }
+
             const ImGuiStyle &style = ImGui::GetStyle();
             const ImVec2 availRegion = ImGui::GetContentRegionAvail();
 
@@ -94,24 +105,25 @@ namespace avUi
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.f);
         ImGui::AlignTextToFramePadding();
-        ImGui::PushStyleColor(ImGuiCol_Text, this->http_method_color);
+        ImGui::PushStyleColor(ImGuiCol_Text, this->get_method_color(req.method));
         const char *current = avNet::NetworkManager::method_text(req.method);
         ImGui::SetNextItemWidth(ImGui::CalcTextSize(current).x + style.FramePadding.x * 2.0f + ImGui::GetFrameHeight());
 
         if (ImGui::BeginCombo("##method", current))
         {
             static constexpr avNet::request_method methods[] = {
-                avNet::request_method::get,
-                avNet::request_method::post,
-                avNet::request_method::put,
-                avNet::request_method::del,
+                avNet::request_method::get,  avNet::request_method::post,  avNet::request_method::put,
+                avNet::request_method::del,  avNet::request_method::patch, avNet::request_method::options,
+                avNet::request_method::head,
             };
 
             for (avNet::request_method m : methods)
             {
                 const bool selected = (req.method == m);
+                ImGui::PushStyleColor(ImGuiCol_Text, this->get_method_color(m));
                 if (ImGui::Selectable(avNet::NetworkManager::method_text(m), selected))
                     req.method = m;
+                ImGui::PopStyleColor();
                 if (selected)
                     ImGui::SetItemDefaultFocus();
             }
@@ -121,7 +133,7 @@ namespace avUi
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.f);
-        ImGui::InputText("##title_edit", &req.title.value(),
+        ImGui::InputText("##title_edit", &req.url,
                          ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
 
         ImGui::SameLine();

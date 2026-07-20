@@ -7,7 +7,7 @@ namespace avR
     class AvRequestListState : public AvState
     {
     public:
-        std::vector<AvRequest> requests;
+        std::vector<std::shared_ptr<AvRequest>> requests;
         std::string environment;
 
     public:

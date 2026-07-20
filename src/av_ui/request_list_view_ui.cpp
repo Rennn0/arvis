@@ -6,7 +6,9 @@
 
 namespace avUi
 {
-    RequstListViewUi::RequstListViewUi(std::string id) : avR::UiComponent(std::move(id))
+    RequstListViewUi::RequstListViewUi(std::string id)
+        : avR::UiComponent(std::move(id)), request_list_state(std::make_shared<avR::AvRequestListState>()),
+          request_storage(std::make_unique<avS::AvRequestStorage>())
     {
         this->windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 
@@ -18,39 +20,11 @@ namespace avUi
     RequstListViewUi::RequstListViewUi(std::string id, avR::AvState *sharedState) : RequstListViewUi(id)
     {
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
-        this->request_list_state = std::make_shared<avR::AvRequestListState>();
-        this->request_list_state->environment = "Development";
-        this->request_list_state->requests.reserve(40);
-        this->request_list_state->requests.push_back(avR::AvRequest{
-            .id = 1,
-            .timestamp = 5000,
-            .method = avNet::request_method::get,
-            .title = "get products",
-        });
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 2, .timestamp = 5000, .method = avNet::request_method::get, .title = "post product"});
-        this->request_list_state->requests.push_back(avR::AvRequest{
-            .id = 3, .timestamp = 5000, .method = avNet::request_method::get, .title = "delete product"});
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 4, .timestamp = 5000, .method = avNet::request_method::post, .title = "healthcheck"});
-        this->request_list_state->requests.push_back(avR::AvRequest{
-            .id = 5, .timestamp = 5000, .method = avNet::request_method::patch, .title = "get products"});
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 6, .timestamp = 5000, .method = avNet::request_method::del, .title = "post product"});
-        this->request_list_state->requests.push_back(avR::AvRequest{
-            .id = 7, .timestamp = 5000, .method = avNet::request_method::get, .title = "delete product"});
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 8, .timestamp = 5000, .method = avNet::request_method::get, .title = "healthcheck"});
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 9, .timestamp = 5000, .method = avNet::request_method::get, .title = "get products"});
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 10, .timestamp = 5000, .method = avNet::request_method::get, .title = "post product"});
-        this->request_list_state->requests.push_back(avR::AvRequest{
-            .id = 11, .timestamp = 5000, .method = avNet::request_method::get, .title = "delete product"});
-        this->request_list_state->requests.push_back(
-            avR::AvRequest{.id = 12, .timestamp = 5000, .method = avNet::request_method::get, .title = "healthcheck"});
+        this->request_list_state->requests = this->request_storage->select_all();
+        this->request_list_state->environment = "Development"; // #TODO roca env sys aewyoba esec sheicvleba
 
-        this->shared_state->display_request = &this->request_list_state->requests.front();
+        if (this->request_list_state->requests.size() > 0)
+            this->shared_state->display_request = this->request_list_state->requests.front().get();
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -110,13 +84,13 @@ namespace avUi
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - addLabelButtonWidth);
         if (ImGui::Button(addLabel))
         {
-            const int64_t lastId = this->request_list_state->requests.back().id;
             using namespace std::chrono;
-            this->request_list_state->requests.push_back(avR::AvRequest{
-                .id = lastId + 1,
+            std::shared_ptr<avR::AvRequest> req = std::make_shared<avR::AvRequest>(avR::AvRequest{
                 .timestamp = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count(),
             });
-            this->shared_state->display_request = &this->request_list_state->requests.back();
+            this->request_list_state->requests.push_back(std::move(req));
+            this->request_storage->upsert(this->request_list_state->requests);
+            this->shared_state->display_request = this->request_list_state->requests.back().get();
         }
         ImGui::SetItemTooltip("add request");
 
@@ -135,8 +109,6 @@ namespace avUi
         {
             if (ImGui::BeginTabItem("history"))
             {
-                const float itemHeight =
-                    ImGui::GetTextLineHeight() * 2 + style.ItemSpacing.y + style.FramePadding.y * 2;
                 const avR::AvRequest *selected = this->shared_state->display_request;
 
                 ImGui::Dummy(ImVec2(0.0f, 5.0f));
@@ -144,33 +116,35 @@ namespace avUi
                 ImGui::TextDisabled("Today");
                 ImGui::Unindent(12.f);
                 ImGui::Dummy(ImVec2(0.0f, 5.0f));
-                for (avR::AvRequest &request : this->request_list_state->requests |
-                                                   std::views::filter([](const avR::AvRequest &r) { return r.id < 5; }))
+                for (std::shared_ptr<avR::AvRequest> &request :
+                     this->request_list_state->requests |
+                         std::views::filter([](const std::shared_ptr<avR::AvRequest> &r) { return r->id < 5; }))
                 {
-                    ImGui::PushID(request.id);
-                    if (ImGui::Selectable(request.display_name().c_str(), selected && request.id == selected->id,
-                                          ImGuiSelectableFlags_None, ImVec2(0, itemHeight)))
-                    {
-                        this->shared_state->display_request = &request;
-                    }
-                    ImGui::PopID();
+                    this->render_request_row(selected, request.get(), style);
                 }
-
                 ImGui::Dummy(ImVec2(0.0f, 5.0f));
                 ImGui::Indent(12.f);
                 ImGui::TextDisabled("Yesterday");
                 ImGui::Unindent(12.f);
                 ImGui::Dummy(ImVec2(0.0f, 5.0f));
-                for (avR::AvRequest &request : this->request_list_state->requests |
-                                                   std::views::filter([](avR::AvRequest &r) { return r.id >= 5; }))
+                for (std::shared_ptr<avR::AvRequest> &request :
+                     this->request_list_state->requests |
+                         std::views::filter([](const std::shared_ptr<avR::AvRequest> &r) { return r->id >= 5; }))
                 {
-                    ImGui::PushID(request.id);
-                    if (ImGui::Selectable(request.display_name().c_str(), selected && request.id == selected->id,
-                                          ImGuiSelectableFlags_None, ImVec2(0, itemHeight)))
-                    {
-                        this->shared_state->display_request = &request;
-                    }
-                    ImGui::PopID();
+                    this->render_request_row(selected, request.get(), style);
+                }
+
+                if (this->pending_delete_req.has_value())
+                {
+                    const int64_t id = this->pending_delete_req.value();
+                    if (this->shared_state->display_request && this->shared_state->display_request->id == id)
+                        this->shared_state->display_request = nullptr;
+
+                    this->request_storage->del(id);
+                    std::erase_if(this->request_list_state->requests,
+                                  [id](std::shared_ptr<avR::AvRequest> x) { return x->id == id; });
+
+                    this->pending_delete_req.reset();
                 }
 
                 ImGui::EndTabItem();
@@ -202,5 +176,100 @@ namespace avUi
         {
         }
         ImGui::SetItemTooltip("modify environment variables");
+    }
+
+    void RequstListViewUi::render_request_row(const avR::AvRequest *selected, avR::AvRequest *request,
+                                              const ImGuiStyle &style)
+    {
+        ImGui::PushID(request->id);
+
+        const bool is_selected = selected && request->id == selected->id;
+        const ImVec2 row_start = ImGui::GetCursorPos();
+        const float row_width = ImGui::GetContentRegionAvail().x;
+        const float pad_x = style.ItemSpacing.x;
+        const float line_h = ImGui::GetTextLineHeight();
+
+        // --- line 1 column geometry: [METHOD]  [wrapped title]  [STATUS] ---
+        const char *method_txt = avNet::NetworkManager::method_text(request->method);
+        const float method_w = ImGui::CalcTextSize(method_txt).x;
+
+        char status_buf[8];
+        std::snprintf(status_buf, sizeof(status_buf), "%d", request->status_code.value_or(0));
+        const float status_w = ImGui::CalcTextSize(status_buf).x;
+
+        const std::string title_txt = request->display_name(); // copy: unambiguous lifetime
+
+        const float title_x = row_start.x + pad_x + method_w + style.ItemSpacing.x;
+        const float status_x = row_start.x + row_width - status_w - pad_x;
+        const float title_right = status_x - style.ItemSpacing.x;             // absolute wrap X
+        const float title_wrap_width = std::max(title_right - title_x, 1.0f); // matching width
+        const float title_h =
+            std::max(ImGui::CalcTextSize(title_txt.c_str(), nullptr, false, title_wrap_width).y, line_h);
+
+        // --- url geometry (line 2+) ---
+        const float wrap_width = row_width - pad_x * 2.0f;
+        const float url_h = ImGui::CalcTextSize(request->url.c_str(), nullptr, false, wrap_width).y;
+
+        // line 1 is as tall as the (possibly multi-line) title
+        const float row_height = style.FramePadding.y * 2.0f + title_h + style.ItemSpacing.y + url_h;
+
+        // 1) clickable box, dynamic height
+        if (ImGui::Selectable("##row", is_selected, ImGuiSelectableFlags_None, ImVec2(0.0f, row_height)))
+        {
+            this->shared_state->display_request = request;
+        }
+        const ImVec2 row_end = ImGui::GetCursorPos();
+
+        // 2) right-click -> title edit panel (must stay right after the selectable)
+        if (ImGui::BeginPopupContextItem())
+        {
+            // ImGui::SetNextItemWidth(200.0f);
+            if (ImGui::IsWindowAppearing())
+                ImGui::SetKeyboardFocusHere();
+            if (!request->title.has_value())
+                request->title.emplace(request->display_name());
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextDisabled("title");
+            ImGui::SameLine();
+            if (ImGui::InputText("##title", &request->title.value(), ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                this->request_storage->upsert(request);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::Spacing();
+            if (ImGui::Button("delete"))
+            {
+                this->pending_delete_req = request->id;
+                // this->request_storage->del(request->id);
+                // std::erase_if(this->request_list_state->requests,
+                //               [id = request->id](std::shared_ptr<avR::AvRequest> x) { return x->id == id; });
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+
+        // 3) line 1: METHOD (top-left), STATUS (top-right), wrapped TITLE (middle column)
+        const float line1_y = row_start.y + style.FramePadding.y;
+
+        ImGui::SetCursorPos(ImVec2(row_start.x + pad_x, line1_y));
+        ImGui::TextColored(this->get_method_color(request->method), "%s", method_txt);
+
+        ImGui::SetCursorPos(ImVec2(status_x, line1_y));
+        ImGui::TextColored(this->get_status_color(request->status_code.value_or(0)), "%s", status_buf);
+
+        ImGui::SetCursorPos(ImVec2(title_x, line1_y));
+        ImGui::PushTextWrapPos(title_right);
+        ImGui::TextUnformatted(title_txt.c_str());
+        ImGui::PopTextWrapPos();
+
+        // 4) line 2+: wrapped url
+        ImGui::SetCursorPos(ImVec2(row_start.x + pad_x, line1_y + title_h + style.ItemSpacing.y));
+        ImGui::PushTextWrapPos(row_start.x + row_width - pad_x);
+        ImGui::TextDisabled("%s", request->url.c_str());
+        ImGui::PopTextWrapPos();
+
+        // 5) restore layout cursor
+        ImGui::SetCursorPos(row_end);
+        ImGui::PopID();
     }
 } // namespace avUi
