@@ -162,10 +162,10 @@ namespace avUi
     void RequstListViewUi::render_footer(const ImGuiStyle &style)
     {
         const float savedTxtOffset = 15.f;
-        const int savedReqCountMock = 102;
+        const int savedCount = this->request_list_state->requests.size();;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + savedTxtOffset);
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("%d saved", savedReqCountMock);
+        ImGui::Text("%d saved", savedCount);
 
         const char *envLabel = "env";
         const float envLabelButtonWidth = ImGui::CalcTextSize(envLabel).x + style.FramePadding.x * 3.f;

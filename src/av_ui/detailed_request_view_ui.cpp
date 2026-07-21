@@ -2,7 +2,9 @@
 
 namespace avUi
 {
-    DetailedRequestViewUi::DetailedRequestViewUi(std::string id) : avR::UiComponent(std::move(id)), footer_height(-1.f)
+    DetailedRequestViewUi::DetailedRequestViewUi(std::string id)
+        : avR::UiComponent(std::move(id)), footer_height(-1.f),
+          request_storage(std::make_unique<avS::AvRequestStorage>())
     {
         this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
     }
@@ -122,7 +124,10 @@ namespace avUi
                 const bool selected = (req.method == m);
                 ImGui::PushStyleColor(ImGuiCol_Text, this->get_method_color(m));
                 if (ImGui::Selectable(avNet::NetworkManager::method_text(m), selected))
+                {
                     req.method = m;
+                    this->save_state_change();
+                }
                 ImGui::PopStyleColor();
                 if (selected)
                     ImGui::SetItemDefaultFocus();
@@ -133,8 +138,11 @@ namespace avUi
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.f);
-        ImGui::InputText("##title_edit", &req.url,
-                         ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+        if (ImGui::InputText("##title_edit", &req.url,
+                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+        {
+            this->save_state_change();
+        };
 
         ImGui::SameLine();
         const char *send_label = "Send";
@@ -147,5 +155,10 @@ namespace avUi
     }
     void DetailedRequestViewUi::render_footer(const ImGuiStyle &style)
     {
+    }
+
+    void DetailedRequestViewUi::save_state_change() const
+    {
+        this->request_storage->upsert(this->shared_state->display_request);
     }
 } // namespace avUi
