@@ -223,6 +223,38 @@ namespace avUi
         {
             this->shared_state->display_request = request;
         }
+
+        if (ImGui::BeginDragDropSource())
+        {
+            ImGui::SetDragDropPayload("REQ", &request, sizeof(request));
+            ImGui::Text("dragging: %s", request->display_name());
+            ImGui::EndDragDropSource();
+        }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("REQ"))
+            {
+                avR::AvRequest *dropedReq = *(avR::AvRequest **)payload->Data;
+                auto it1 =
+                    std::find_if(this->request_list_state->requests.begin(), this->request_list_state->requests.end(),
+                                 [request](const std::shared_ptr<avR::AvRequest> &p) { return p.get() == request; });
+                auto it2 = std::find_if(
+                    this->request_list_state->requests.begin(), this->request_list_state->requests.end(),
+                    [dropedReq](const std::shared_ptr<avR::AvRequest> &p) { return p.get() == dropedReq; });
+
+                if (it1 != this->request_list_state->requests.end() &&
+                    it2 != this->request_list_state->requests.end() &&
+                    (this->root.is_today(it1->get()->timestamp) && this->root.is_today(it2->get()->timestamp) ||
+                     !this->root.is_today(it1->get()->timestamp) && !this->root.is_today(it2->get()->timestamp)))
+                {
+                    std::iter_swap(it1, it2);
+                }
+            }
+
+            ImGui::EndDragDropTarget();
+        }
+
         const ImVec2 row_end = ImGui::GetCursorPos();
 
         // 2) right-click -> title edit panel (must stay right after the selectable)
