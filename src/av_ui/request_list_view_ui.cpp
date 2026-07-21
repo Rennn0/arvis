@@ -26,7 +26,8 @@ namespace avUi
 
         if (this->request_list_state->requests.size() > 0)
         {
-            auto latest = std::ranges::max_element(this->request_list_state->requests, {}, &avR::AvRequest::timestamp);
+            const auto &latest =
+                std::ranges::max_element(this->request_list_state->requests, {}, &avR::AvRequest::timestamp);
             this->shared_state->display_request = latest->get();
         }
     }
@@ -232,6 +233,7 @@ namespace avUi
                 ImGui::SetKeyboardFocusHere();
             if (!request->title.has_value())
                 request->title.emplace(request->display_name());
+            ImGui::TextDisabled(("last use: " + this->root.timestamp_to_date(request->timestamp)).c_str());
             ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled("title");
             ImGui::SameLine();
