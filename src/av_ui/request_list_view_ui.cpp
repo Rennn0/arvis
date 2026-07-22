@@ -252,7 +252,7 @@ namespace avUi
         if (ImGui::BeginDragDropSource())
         {
             ImGui::SetDragDropPayload("REQ", &request, sizeof(request));
-            ImGui::Text("dragging: %s", request->display_name());
+            ImGui::Text("dragging: %s", request->display_name().c_str());
             ImGui::EndDragDropSource();
         }
 
@@ -283,7 +283,7 @@ namespace avUi
                 ImGui::SetKeyboardFocusHere();
             if (!request->title.has_value())
                 request->title.emplace(request->display_name());
-            ImGui::TextDisabled(("last modified: " + this->root.timestamp_to_date(request->timestamp)).c_str());
+            ImGui::TextDisabled("%s", ("last modified: " + this->root.timestamp_to_date(request->timestamp)).c_str());
             ImGui::AlignTextToFramePadding();
             ImGui::TextDisabled("title");
             ImGui::SameLine();
