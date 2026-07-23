@@ -18,7 +18,7 @@ namespace avS
 #else
         const char *xdg = std::getenv("XDG_DATA_HOME");
         const char *home = std::getenv("HOME");
-        fs::path dir = xdg ? fs::path(xdg) : (home ? fs : path(home) / ".local/share" : fs::curent_path());
+        fs::path dir = xdg ? fs::path(xdg) : (home ? fs::path(home) / ".local/share" : fs::current_path());
 #endif
         dir /= "arvis";
         std::filesystem::create_directories(dir);

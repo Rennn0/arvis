@@ -20,13 +20,6 @@ namespace avUi
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id, avR::AvState *sharedState) : DetailedRequestViewUi(id)
     {
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
-
-        if (this->shared_state->display_request)
-        {
-            capturedReqId = this->shared_state->display_request->id;
-            this->shared_state->display_request->params =
-                this->request_params_storage->select_by_req_id(capturedReqId.value());
-        }
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -112,7 +105,7 @@ namespace avUi
             this->render_footer(style);
             ImGui::EndChild();
 
-            ImGui::ShowDemoWindow();
+            // ImGui::ShowDemoWindow();
         }
         ImGui::End();
     }
@@ -184,7 +177,7 @@ namespace avUi
     {
         if (ImGui::BeginTabBar("req_tabs"))
         {
-            if (capturedReqId.has_value() && capturedReqId != this->shared_state->display_request->id)
+            if (!capturedReqId.has_value() || capturedReqId.value() != this->shared_state->display_request->id)
             {
                 capturedReqId = this->shared_state->display_request->id;
                 this->shared_state->display_request->params =
@@ -403,13 +396,13 @@ namespace avUi
         this->shared_state->display_request->last_response_http_code = 0;
 
         // run off the UI thread so a slow/dead endpoint never freezes the window.
-        this->pending_response =
-            std::async(std::launch::async,
-                       [this, request = std::move(request)]()
-                       {
-                           return this->network_manager.send(request, this->shared_state->display_request->last_response_body,
-                                                             &this->shared_state->display_request->last_response_http_code);
-                       });
+        this->pending_response = std::async(std::launch::async,
+                                            [this, request = std::move(request)]()
+                                            {
+                                                return this->network_manager.send(
+                                                    request, this->shared_state->display_request->last_response_body,
+                                                    &this->shared_state->display_request->last_response_http_code);
+                                            });
     }
 
     void DetailedRequestViewUi::poll_response()
@@ -621,7 +614,7 @@ namespace avUi
             ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("included", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("delete", ImGuiTableColumnFlags_WidthStretch);
+            // ImGui::TableSetupColumn("delete", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
             ImGuiListClipper clipper;
@@ -677,6 +670,12 @@ namespace avUi
     }
     void DetailedRequestViewUi::render_tab_body() const
     {
+        if (!this->shared_state->display_request->body.has_value())
+            this->shared_state->display_request->body.emplace();
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        ImGui::InputTextMultiline("##body", &this->shared_state->display_request->body.value(),
+                                  ImVec2(avail.x, avail.y),
+                                  ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_AllowTabInput);
     }
     void DetailedRequestViewUi::render_tab_auth() const
     {

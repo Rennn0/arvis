@@ -32,7 +32,10 @@ namespace
 
     // scalar as shown in the value column: dump() quotes strings and renders
     // numbers / bool / null verbatim.
-    std::string scalar_display(const nlohmann::json &v) { return v.dump(); }
+    std::string scalar_display(const nlohmann::json &v)
+    {
+        return v.dump();
+    }
 
     // scalar as matched by the filter: unquoted for strings so "arvis" matches
     // the value "arvis" without the user typing the quotes.
@@ -186,7 +189,7 @@ namespace avUi
             this->node_context_menu(label, value);
 
             ImGui::TableSetColumnIndex(1);
-            ImGui::TextColored(col_meta, value.is_object() ? "{ %zu }" : "[ %zu ]", value.size());
+            // ImGui::TextColored(col_meta, value.is_object() ? "{ %zu }" : "[ %zu ]", value.size());
 
             if (open)
             {
@@ -240,7 +243,7 @@ namespace avUi
             ImGui::SetClipboardText(this->pretty.c_str());
 
         const float stats_h = ImGui::GetFrameHeightWithSpacing();
-        const ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV |
+        const ImGuiTableFlags flags = /*ImGuiTableFlags_RowBg |*/ ImGuiTableFlags_BordersInnerV |
                                       ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
         if (ImGui::BeginTable("##json_tree", 2, flags, ImVec2(0, -stats_h)))
         {
