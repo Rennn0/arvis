@@ -48,7 +48,8 @@ namespace avS
             "FOREIGN KEY(request_id) REFERENCES requests(id) ON DELETE CASCADE"
             ");";
 
-        const char *select_all_request_param_sql = "SELECT*FROM request_params WHERE request_id = ? ORDER BY order_by;";
+        const char *select_all_request_param_sql =
+            "SELECT * FROM request_params WHERE request_id = ? ORDER BY order_by;";
         const char *delete_request_param_sql = "DELETE FROM request_params WHERE id = ?;";
     };
 } // namespace avS

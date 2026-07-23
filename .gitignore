@@ -11,3 +11,4 @@ out/
 *.dev*
 .vs
 *.db
+.idea

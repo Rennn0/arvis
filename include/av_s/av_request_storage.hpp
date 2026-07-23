@@ -58,7 +58,7 @@ namespace avS
                                          "collection=excluded.collection,"
                                          "order_by=excluded.order_by;";
 
-        const char *select_all_request_sql = "SELECT*FROM requests ORDER BY order_by;";
+        const char *select_all_request_sql = "SELECT * FROM requests ORDER BY order_by;";
         const char *delete_request_sql = "DELETE FROM requests WHERE id = ?;";
     };
 
