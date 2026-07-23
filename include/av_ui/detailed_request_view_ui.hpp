@@ -10,6 +10,8 @@
 
 namespace avUi
 {
+    class JsonTreeView;
+
     class DetailedRequestViewUi : public avR::UiComponent
     {
     public:
@@ -39,6 +41,20 @@ namespace avUi
         // snapshot of the request that produced the current response, kept so the footer can
         // reproduce it (e.g. "copy as cURL"). It is an independent copy of what the worker got.
         avNet::http_request last_request;
+
+        // how the response body is presented in the footer. Defaults to the JSON tree when the
+        // body parses as JSON (chosen in poll_response), otherwise raw text.
+        enum class ResponseView
+        {
+            tree,
+            pretty,
+            raw
+        };
+        ResponseView response_view = ResponseView::raw;
+        // parses the response body once per response and renders it as a collapsible tree /
+        // pretty dump. Held by pointer so its (heavy) JSON header stays out of this header.
+        std::unique_ptr<JsonTreeView> json_view;
+
         std::future<avNet::response_status> pending_response;
 
         void render_header(const ImGuiStyle &style);

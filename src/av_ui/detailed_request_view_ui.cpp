@@ -1,4 +1,5 @@
 #include <av_ui/detailed_request_view_ui.hpp>
+#include <av_ui/json_tree_view.hpp>
 
 namespace avUi
 {
@@ -11,7 +12,8 @@ namespace avUi
           request_storage(std::make_unique<avS::AvRequestStorage>()),
           request_params_storage(std::make_unique<avS::AvRequestParamsStorage>()),
           request_headers_storage(std::make_unique<avS::AvRequestHeadersStorage>()), response_http_code(0),
-          last_status(avNet::response_status::Ok), has_response(false)
+          last_status(avNet::response_status::Ok), has_response(false),
+          json_view(std::make_unique<JsonTreeView>())
     {
         this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
     }
@@ -311,15 +313,50 @@ namespace avUi
 
         ImGui::Separator();
 
-        // read-only body view fills the remaining footer space. It wraps at the child's right
-        // edge (no horizontal scroll) and only scrolls vertically on overflow.
-        if (ImGui::BeginChild("##response_body_view", ImVec2(0, 0)))
+        // JSON bodies get the interactive tree / pretty views; anything else (HTML, plain text,
+        // an error string) falls back to the raw text view. The selector only appears when there
+        // is a tree/pretty view to switch to.
+        const bool json = this->json_view->is_json();
+        if (json)
         {
-            ImGui::PushTextWrapPos(0.f); // 0 == wrap at the child's right edge
-            ImGui::TextUnformatted(this->response_body.data(), this->response_body.data() + this->response_body.size());
-            ImGui::PopTextWrapPos();
+            const auto mode_tab = [&](const char *label, ResponseView mode)
+            {
+                const bool active = this->response_view == mode;
+                if (active)
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                if (ImGui::SmallButton(label))
+                    this->response_view = mode;
+                if (active)
+                    ImGui::PopStyleColor();
+            };
+            mode_tab("Tree", ResponseView::tree);
+            ImGui::SameLine();
+            mode_tab("Pretty", ResponseView::pretty);
+            ImGui::SameLine();
+            mode_tab("Raw", ResponseView::raw);
         }
-        ImGui::EndChild();
+
+        if (json && this->response_view == ResponseView::tree)
+        {
+            this->json_view->render_tree();
+        }
+        else if (json && this->response_view == ResponseView::pretty)
+        {
+            this->json_view->render_pretty();
+        }
+        else
+        {
+            // read-only body view fills the remaining footer space. It wraps at the child's right
+            // edge (no horizontal scroll) and only scrolls vertically on overflow.
+            if (ImGui::BeginChild("##response_body_view", ImVec2(0, 0)))
+            {
+                ImGui::PushTextWrapPos(0.f); // 0 == wrap at the child's right edge
+                ImGui::TextUnformatted(this->response_body.data(),
+                                       this->response_body.data() + this->response_body.size());
+                ImGui::PopTextWrapPos();
+            }
+            ImGui::EndChild();
+        }
     }
 
     void DetailedRequestViewUi::send_request()
@@ -377,6 +414,11 @@ namespace avUi
         {
             this->last_status = this->pending_response.get();
             this->has_response = true;
+
+            // parse the body once, here, rather than every frame in the footer. Default to the
+            // tree view when it is JSON, otherwise fall back to the raw text view.
+            this->json_view->set_source(this->response_body);
+            this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
         }
     }
 

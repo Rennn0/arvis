@@ -23,6 +23,10 @@ endif()
 # with no third-party curl subprojects.
 find_package(CURL REQUIRED)
 
+# Header-only JSON parser (vcpkg, declared in vcpkg.json). Used by the response
+# viewer to parse and render JSON bodies as an interactive tree.
+find_package(nlohmann_json CONFIG REQUIRED)
+
 # OpenGL is the cross-platform rendering backend for the GUI (provided by the OS).
 find_package(OpenGL REQUIRED)
 
@@ -107,6 +111,7 @@ add_executable(arvis
     src/av_ui/root_ui.cpp
     src/av_ui/request_list_view_ui.cpp
     src/av_ui/detailed_request_view_ui.cpp
+    src/av_ui/json_tree_view.cpp
     src/av_root/av_inter_view_shared_state.cpp
     src/av_root/av_request_list_state.cpp
     src/av_s/av_storage.cpp
@@ -119,7 +124,7 @@ target_include_directories(arvis PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(arvis PRIVATE CURL::libcurl imgui SQLiteCpp)
+target_link_libraries(arvis PRIVATE CURL::libcurl imgui SQLiteCpp nlohmann_json::nlohmann_json)
 
 get_target_property(arvis_all_sources arvis SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${arvis_all_sources})
