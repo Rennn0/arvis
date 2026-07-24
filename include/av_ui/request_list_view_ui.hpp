@@ -29,5 +29,7 @@ namespace avUi
         void render_main_content(const ImGuiStyle &style);
         void render_footer(const ImGuiStyle &style);
         void render_request_row(const avR::AvRequest *selected, avR::AvRequest *request, const ImGuiStyle &style);
+
+        void new_request();
     };
 } // namespace avUi

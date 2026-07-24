@@ -45,6 +45,7 @@ namespace avR
         avNet::response_status last_status;
         std::string last_response_body;
         long last_response_http_code = 0;
+        bool pending_save = false;
     };
 
 } // namespace avR

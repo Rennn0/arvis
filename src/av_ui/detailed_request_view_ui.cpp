@@ -6,6 +6,8 @@ namespace avUi
     std::optional<int64_t> pendingParamDel;
     std::optional<int64_t> pendingHeaderDel;
     std::optional<int64_t> capturedReqId;
+    bool showStyles = false;
+    bool showShortcuts = false;
 
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id)
         : avR::UiComponent(std::move(id)), footer_height(-1.f),
@@ -14,12 +16,43 @@ namespace avUi
           request_headers_storage(std::make_unique<avS::AvRequestHeadersStorage>()),
           json_view(std::make_unique<JsonTreeView>())
     {
-        this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+        this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove |
+                             ImGuiWindowFlags_NoResize;
     }
 
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id, avR::AvState *sharedState) : DetailedRequestViewUi(id)
     {
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
+
+        this->shared_state->shortcut.add(UiShortcut{"New request", "ctrl + n",
+                                                    []() { return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N); },
+                                                    [this]()
+                                                    {
+                                                        if (this->shared_state->on_new_request)
+                                                            this->shared_state->on_new_request();
+                                                    }});
+
+        this->shared_state->shortcut.add(UiShortcut{"Send request", "ctrl + enter",
+                                                    []() { return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Enter); },
+                                                    [this]() { this->send_request(); }});
+
+        this->shared_state->shortcut.add(UiShortcut{
+            "Save changes", "ctrl + s",
+            [this]()
+            {
+                return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S) && this->shared_state->display_request->pending_save;
+            },
+            [this]()
+            {
+                this->request_storage->upsert(this->shared_state->display_request);
+                this->request_params_storage->upsert(this->shared_state->display_request->params);
+                this->request_headers_storage->upsert(this->shared_state->display_request->headers);
+                this->shared_state->display_request->pending_save = false;
+            }});
+
+        this->shared_state->shortcut.add(UiShortcut{"Show shortcuts", "ctrl + /",
+                                                    []() { return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Slash); },
+                                                    [&]() { showShortcuts = true; }});
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -42,6 +75,8 @@ namespace avUi
 
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->window_flags))
         {
+            this->shared_state->shortcut.process();
+
             if (!this->shared_state->display_request)
             {
                 const char *msg = "No request selected";
@@ -51,6 +86,36 @@ namespace avUi
                 ImGui::TextDisabled("%s", msg);
                 ImGui::End();
                 return;
+            }
+
+            if (ImGui::BeginMenuBar())
+            {
+                if (ImGui::BeginMenu("file"))
+                {
+                    if (ImGui::MenuItem("new request"))
+                    {
+                    }
+
+                    if (ImGui::MenuItem("save"))
+                    {
+                    }
+                    ImGui::EndMenu();
+                }
+
+                if (ImGui::BeginMenu("help"))
+                {
+                    if (ImGui::MenuItem("shortcuts", "ctrl + /"))
+                    {
+                        showShortcuts = true;
+                    }
+
+                    if (ImGui::MenuItem("style editor"))
+                    {
+                        showStyles = true;
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenuBar();
             }
 
             // pick up a completed request once per frame so the header (button state) and
@@ -105,9 +170,49 @@ namespace avUi
             this->render_footer(style);
             ImGui::EndChild();
 
-            // ImGui::ShowDemoWindow();
+            if (showShortcuts)
+                ImGui::OpenPopup("popup_shortcuts");
+
+            if (ImGui::BeginPopupModal("popup_shortcuts", &showShortcuts, ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                ImGui::BeginTable("table_shortcuts", 2);
+
+                for (const UiShortcut &s : this->shared_state->shortcut.shortcuts)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text(s.display.c_str());
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::SameLine();
+                    ImGui::Text(s.binding.c_str());
+                }
+
+                ImGui::EndTable();
+                if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+                {
+                    ImGui::CloseCurrentPopup();
+                    showShortcuts = false;
+                }
+
+                ImGui::EndPopup();
+            }
         }
+
         ImGui::End();
+
+        if (showStyles)
+        {
+            if (ImGui::Begin("style editor", &showStyles))
+            {
+                ImGui::ShowStyleEditor();
+            }
+
+            if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+            {
+                showStyles = false;
+            }
+            ImGui::End();
+        }
     }
     void DetailedRequestViewUi::render_header(const ImGuiStyle &style)
     {
@@ -172,6 +277,13 @@ namespace avUi
         ImGui::Spacing();
         ImGui::SameLine();
         ImGui::TextDisabled("%s", this->root.timestamp_to_date(req.timestamp).c_str());
+
+        if (this->shared_state->display_request->pending_save)
+        {
+            ImGui::SameLine();
+            ImGui::TextUnformatted("*");
+            ImGui::SetItemTooltip("press ctrl+s to save");
+        }
     }
     void DetailedRequestViewUi::render_main_content(const ImGuiStyle &style)
     {
@@ -487,14 +599,13 @@ namespace avUi
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchSame;
-        bool isModified = false;
 
         if (ImGui::BeginTable("params_table", 5, flags, ImVec2(0, 0), 0.f))
         {
             ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("description", ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("included");
+            ImGui::TableSetupColumn("include");
             ImGui::TableHeadersRow();
 
             ImGuiListClipper clipper;
@@ -508,20 +619,14 @@ namespace avUi
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    if (ImGui::InputText("##key", &item->key,
-                                         ImGuiInputTextFlags_EnterReturnsTrue |
-                                             ImGuiInputTextFlags_CtrlEnterForNewLine))
-                    {
-                        isModified = true;
-                    }
+                    ImGui::InputText("##key", &item->key);
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                        this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    if (ImGui::InputText("##val", &item->value,
-                                         ImGuiInputTextFlags_EnterReturnsTrue |
-                                             ImGuiInputTextFlags_CtrlEnterForNewLine))
-                    {
-                        isModified = true;
-                    }
+                    ImGui::InputText("##val", &item->value);
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                        this->shared_state->display_request->pending_save = true;
 
                     ImGui::TableNextColumn();
                     if (item->editing)
@@ -536,7 +641,7 @@ namespace avUi
                         if (ImGui::IsItemDeactivated())
                         {
                             item->editing = false;
-                            isModified = true;
+                            this->shared_state->display_request->pending_save = true;
                         }
                     }
                     else
@@ -559,12 +664,10 @@ namespace avUi
                     }
                     ImGui::TableNextColumn();
                     if (ImGui::Checkbox("##included", &item->included))
-                        isModified = true;
+                        this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
                     if (ImGui::Button("delete"))
-                    {
                         pendingParamDel = item->id;
-                    }
                     ImGui::PopID();
                 }
             ImGui::EndTable();
@@ -574,10 +677,8 @@ namespace avUi
         {
             this->shared_state->display_request->params.push_back(
                 avR::AvRequestParam{.request_id = this->shared_state->display_request->id});
-            isModified = true;
+            this->shared_state->display_request->pending_save = true;
         }
-
-        bool paramsChanged = isModified;
 
         if (pendingParamDel.has_value())
         {
@@ -586,20 +687,22 @@ namespace avUi
             std::erase_if(this->shared_state->display_request->params,
                           [id](avR::AvRequestParam &p) { return p.id == id; });
             pendingParamDel.reset();
-            paramsChanged = true;
         }
-
-        if (isModified)
-            this->request_params_storage->upsert(this->shared_state->display_request->params);
 
         // params are the source of truth for the query string: reflect any change back into the
         // url shown/edited in the header, and persist it.
-        if (paramsChanged)
+        if (this->shared_state->display_request->pending_save)
         {
             avR::AvRequest *req = this->shared_state->display_request;
             req->url = build_url(req->url, req->params);
             this->save_state_change();
         }
+
+        // if (this->shared_state->pending_save)
+        // {
+        //     this->request_params_storage->upsert(this->shared_state->display_request->params);
+        //     this->shared_state->pending_save = false;
+        // }
     }
     void DetailedRequestViewUi::render_tab_headers() const
     {
@@ -607,13 +710,12 @@ namespace avUi
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchSame;
-        bool isModified = false;
 
         if (ImGui::BeginTable("tab_headers", 4, flags, ImVec2(0, 0), 0.f))
         {
             ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("included", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("include", ImGuiTableColumnFlags_WidthStretch);
             // ImGui::TableSetupColumn("delete", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
@@ -629,26 +731,21 @@ namespace avUi
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    if (ImGui::InputText("##k", &header->key, ImGuiInputTextFlags_EnterReturnsTrue))
-                    {
-                        isModified = true;
-                    }
+                    ImGui::InputText("##k", &header->key);
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                        this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    if (ImGui::InputText("##v", &header->value, ImGuiInputTextFlags_EnterReturnsTrue))
-                    {
-                        isModified = true;
-                    }
+                    ImGui::InputText("##v", &header->value);
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                        this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
                     if (ImGui::Checkbox("##inc", &header->included))
-                    {
-                        isModified = true;
-                    }
+                        this->shared_state->display_request->pending_save = true;
+
                     ImGui::TableNextColumn();
                     if (ImGui::Button("delete"))
-                    {
                         pendingHeaderDel = header->id;
-                    }
                     ImGui::PopID();
                 }
             }
@@ -660,13 +757,14 @@ namespace avUi
         {
             this->shared_state->display_request->headers.push_back(
                 avR::AvRequestHeader{avR::AvRequestParam{.request_id = this->shared_state->display_request->id}});
-            isModified = true;
+            this->shared_state->display_request->pending_save = true;
         }
 
-        if (isModified)
-        {
-            this->request_headers_storage->upsert(this->shared_state->display_request->headers);
-        }
+        // if (this->shared_state->pending_save = true)
+        // {
+        //     this->request_headers_storage->upsert(this->shared_state->display_request->headers);
+        //     this->shared_state->pending_save = false;
+        // }
     }
     void DetailedRequestViewUi::render_tab_body() const
     {
@@ -674,8 +772,7 @@ namespace avUi
             this->shared_state->display_request->body.emplace();
         ImVec2 avail = ImGui::GetContentRegionAvail();
         ImGui::InputTextMultiline("##body", &this->shared_state->display_request->body.value(),
-                                  ImVec2(avail.x, avail.y),
-                                  ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_AllowTabInput);
+                                  ImVec2(avail.x, avail.y), ImGuiInputTextFlags_AllowTabInput);
     }
     void DetailedRequestViewUi::render_tab_auth() const
     {

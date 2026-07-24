@@ -54,6 +54,8 @@ namespace avUi
             //     std::ranges::max_element(this->request_list_state->requests, {}, &avR::AvRequest::timestamp);
             this->shared_state->display_request = this->request_list_state->requests.front().get();
         }
+
+        this->shared_state->on_new_request = [this]() { this->new_request(); };
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -113,13 +115,7 @@ namespace avUi
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - addLabelButtonWidth);
         if (ImGui::Button(addLabel))
         {
-            std::shared_ptr<avR::AvRequest> req = std::make_shared<avR::AvRequest>(avR::AvRequest{
-                .timestamp = this->root.get_timestamp(),
-            });
-            this->request_list_state->requests.push_back(std::move(req));
-            apply_reordering(this->request_list_state->requests);
-            this->request_storage->upsert(this->request_list_state->requests);
-            this->shared_state->display_request = this->request_list_state->requests.back().get();
+            this->new_request();
         }
         ImGui::SetItemTooltip("add request");
 
@@ -315,7 +311,8 @@ namespace avUi
         ImGui::TextColored(this->get_method_color(request->method), "%s", method_txt);
 
         ImGui::SetCursorPos(ImVec2(status_x, line1_y));
-        ImGui::TextColored(this->get_status_color(request->status_code.value_or(0)), "%s", status_buf);
+        if (request->status_code.value_or(0) != 0)
+            ImGui::TextColored(this->get_status_color(request->status_code.value()), "%s", status_buf);
 
         ImGui::SetCursorPos(ImVec2(title_x, line1_y));
         ImGui::PushTextWrapPos(title_right);
@@ -331,5 +328,16 @@ namespace avUi
         // 5) restore layout cursor
         ImGui::SetCursorPos(row_end);
         ImGui::PopID();
+    }
+
+    void RequstListViewUi::new_request()
+    {
+        std::shared_ptr<avR::AvRequest> req = std::make_shared<avR::AvRequest>(avR::AvRequest{
+            .timestamp = this->root.get_timestamp(),
+        });
+        this->request_list_state->requests.push_back(std::move(req));
+        apply_reordering(this->request_list_state->requests);
+        this->request_storage->upsert(this->request_list_state->requests);
+        this->shared_state->display_request = this->request_list_state->requests.back().get();
     }
 } // namespace avUi

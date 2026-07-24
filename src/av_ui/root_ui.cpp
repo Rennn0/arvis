@@ -24,7 +24,7 @@ namespace avUi
         style.TabRounding = 0.f;
         style.TabBorderSize = 1.f;
         ImVec4 *colors = style.Colors;
-        colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.20f, 0.21f, 0.54f);
+        colors[ImGuiCol_FrameBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.54f);
         colors[ImGuiCol_Tab] = ImVec4(0.17f, 0.18f, 0.20f, 0.86f);
         colors[ImGuiCol_TabSelected] = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
         colors[ImGuiCol_Header] = ImVec4(0.42f, 0.51f, 0.62f, 0.31f);
@@ -45,7 +45,7 @@ namespace avUi
             Font::RobotoMedium_compressed_data, Font::RobotoMedium_compressed_size, 18.f, &cfg);
 
         this->FontDefault = this->FontCousine;
-        io.FontDefault = this->FontRobotoLarge;
+        io.FontDefault = this->FontDefault;
 
         this->add_child(std::make_unique<avUi::RequstListViewUi>("req_list_view", this->inter_view_state.get()));
         this->add_child(std::make_unique<avUi::DetailedRequestViewUi>("detailed_view", this->inter_view_state.get()));
