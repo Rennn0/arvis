@@ -5,6 +5,9 @@
 <p align="center">
   A cross-platform (Windows / Linux / macOS) C++20 desktop HTTP client and request inspector with a native GUI.
 </p>
+<p align="center">
+  Focused on <b>developer experience</b>, shortcuts, quick navigation and simplicity.
+</p>
 
 <p align="center">
   <a href="https://github.com/Rennn0/arvis/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/Rennn0/arvis/release.yml?branch=main&label=build" alt="Build status"></a>
@@ -16,7 +19,7 @@
 </p>
 
 <p align="center">
-  Built with <a href="https://curl.se/libcurl/">libcurl</a>, <a href="https://github.com/ocornut/imgui">Dear ImGui</a>, and <a href="https://www.glfw.org/">GLFW</a> + OpenGL3.
+  Built with <a href="https://curl.se/libcurl/">libcurl</a>, <a href="https://github.com/ocornut/imgui">Dear ImGui</a>,  <a href="https://www.glfw.org/">GLFW</a> + OpenGL3 and <a href="https://github.com/SRombauts/SQLiteCpp">SQLiteCpp</a>.
 </p>
 
 ---
