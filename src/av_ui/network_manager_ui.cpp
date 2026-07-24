@@ -110,7 +110,6 @@ namespace avUi
                 continue;
             lastFrame = now;
 
-            this->check_keyboard_events();
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
@@ -127,13 +126,4 @@ namespace avUi
         ImGui::DestroyContext();
         glfwDestroyWindow(window);
     }
-
-    void NetworkManagerUi::check_keyboard_events()
-    {
-        // if (glfwGetKey(this->window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        // {
-        //     glfwSetWindowShouldClose(this->window, true);
-        // }
-    }
-
 } // namespace avUi

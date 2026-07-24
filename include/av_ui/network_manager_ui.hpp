@@ -32,7 +32,5 @@ namespace avUi
         avR::AvRoot avRoot;
         GLFWwindow *window;
         GLFWmonitor *monitor;
-
-        void check_keyboard_events();
     };
 } // namespace avUi

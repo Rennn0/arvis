@@ -24,35 +24,10 @@ namespace avUi
     {
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
 
-        this->shared_state->shortcut.add(UiShortcut{"New request", "ctrl + n",
-                                                    []() { return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N); },
-                                                    [this]()
-                                                    {
-                                                        if (this->shared_state->on_new_request)
-                                                            this->shared_state->on_new_request();
-                                                    }});
-
-        this->shared_state->shortcut.add(UiShortcut{"Send request", "ctrl + enter",
-                                                    []() { return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Enter); },
-                                                    [this]() { this->send_request(); }});
-
-        this->shared_state->shortcut.add(UiShortcut{
-            "Save changes", "ctrl + s",
-            [this]()
-            {
-                return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S) && this->shared_state->display_request->pending_save;
-            },
-            [this]()
-            {
-                this->request_storage->upsert(this->shared_state->display_request);
-                this->request_params_storage->upsert(this->shared_state->display_request->params);
-                this->request_headers_storage->upsert(this->shared_state->display_request->headers);
-                this->shared_state->display_request->pending_save = false;
-            }});
-
-        this->shared_state->shortcut.add(UiShortcut{"Show shortcuts", "ctrl + /",
-                                                    []() { return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Slash); },
-                                                    [&]() { showShortcuts = true; }});
+        this->shared_state->on_send_request.emplace([this]() { this->send_request(); });
+        this->shared_state->on_save_changes.emplace([this]() { this->save_changes(); });
+        this->shared_state->on_show_shortcuts.emplace([this]() { showShortcuts = true; });
+        this->shared_state->on_show_style_editor.emplace([this]() { showStyles = true; });
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -92,12 +67,14 @@ namespace avUi
             {
                 if (ImGui::BeginMenu("file"))
                 {
-                    if (ImGui::MenuItem("new request"))
+                    if (ImGui::MenuItem("new request", "ctrl + n"))
                     {
+                        this->shared_state->on_new_request.value()();
                     }
 
-                    if (ImGui::MenuItem("save"))
+                    if (ImGui::MenuItem("save", "ctrl + s"))
                     {
+                        this->shared_state->on_save_changes.value()();
                     }
                     ImGui::EndMenu();
                 }
@@ -109,7 +86,7 @@ namespace avUi
                         showShortcuts = true;
                     }
 
-                    if (ImGui::MenuItem("style editor"))
+                    if (ImGui::MenuItem("style editor", "ctrl + e"))
                     {
                         showStyles = true;
                     }
@@ -534,6 +511,14 @@ namespace avUi
     void DetailedRequestViewUi::save_state_change() const
     {
         this->request_storage->upsert(this->shared_state->display_request);
+    }
+
+    void DetailedRequestViewUi::save_changes()
+    {
+        this->request_storage->upsert(this->shared_state->display_request);
+        this->request_params_storage->upsert(this->shared_state->display_request->params);
+        this->request_headers_storage->upsert(this->shared_state->display_request->headers);
+        this->shared_state->display_request->pending_save = false;
     }
 
     // percent-encode per RFC 3986: unreserved chars pass through, everything else -> %XX

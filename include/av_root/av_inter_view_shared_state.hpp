@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <av_root/av_state.hpp>
 #include <av_root/av_request.hpp>
 #include <av_ui/ui_shortcut.hpp>
@@ -15,7 +16,12 @@ namespace avR
         AvRequest *display_request;
         avUi::UiShortcut shortcut;
 
-        std::function<void()> on_new_request;
+        std::optional<std::function<void()>> on_new_request;
+        std::optional<std::function<void()>> on_save_changes;
+        std::optional<std::function<void()>> on_send_request;
+        std::optional<std::function<void()>> on_rename_request;
+        std::optional<std::function<void()>> on_show_shortcuts;
+        std::optional<std::function<void()>> on_show_style_editor;
 
     public:
         AvInterViewSharedState();

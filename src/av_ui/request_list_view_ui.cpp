@@ -55,7 +55,7 @@ namespace avUi
             this->shared_state->display_request = this->request_list_state->requests.front().get();
         }
 
-        this->shared_state->on_new_request = [this]() { this->new_request(); };
+        this->shared_state->on_new_request.emplace([this]() { this->new_request(); });
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -274,9 +274,8 @@ namespace avUi
         }
 
         const ImVec2 row_end = ImGui::GetCursorPos();
-
         // 2) right-click -> title edit panel (must stay right after the selectable)
-        if (ImGui::BeginPopupContextItem())
+        if (ImGui::BeginPopupContextItem("##context_popup"))
         {
             // ImGui::SetNextItemWidth(200.0f);
             if (ImGui::IsWindowAppearing())

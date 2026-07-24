@@ -47,8 +47,54 @@ namespace avUi
         this->FontDefault = this->FontCousine;
         io.FontDefault = this->FontDefault;
 
-        this->add_child(std::make_unique<avUi::RequstListViewUi>("req_list_view", this->inter_view_state.get()));
-        this->add_child(std::make_unique<avUi::DetailedRequestViewUi>("detailed_view", this->inter_view_state.get()));
+        avR::AvInterViewSharedState *shared = this->inter_view_state.get();
+        this->add_child(std::make_unique<avUi::RequstListViewUi>("req_list_view", shared));
+        this->add_child(std::make_unique<avUi::DetailedRequestViewUi>("detailed_view", shared));
+
+        shared->shortcut.add(UiShortcut{"New request", "ctrl + n",
+                                        [shared]()
+                                        {
+                                            return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N,
+                                                                   ImGuiInputFlags_RouteGlobal) &&
+                                                   shared->on_new_request.has_value();
+                                        },
+                                        [shared]() { shared->on_new_request.value()(); }});
+
+        shared->shortcut.add(UiShortcut{"Send request", "ctrl + enter",
+                                        [shared]()
+                                        {
+                                            return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Enter,
+                                                                   ImGuiInputFlags_RouteGlobal) &&
+                                                   shared->on_send_request.has_value();
+                                        },
+                                        [shared]() { shared->on_send_request.value()(); }});
+
+        shared->shortcut.add(UiShortcut{"Save changes", "ctrl + s",
+                                        [shared]()
+                                        {
+                                            return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S,
+                                                                   ImGuiInputFlags_RouteGlobal) &&
+                                                   shared->on_save_changes.has_value();
+                                        },
+                                        [shared]() { shared->on_save_changes.value()(); }});
+
+        shared->shortcut.add(UiShortcut{"Show shortcuts", "ctrl + /",
+                                        [shared]()
+                                        {
+                                            return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Slash,
+                                                                   ImGuiInputFlags_RouteGlobal) &&
+                                                   shared->on_show_shortcuts.has_value();
+                                        },
+                                        [shared]() { shared->on_show_shortcuts.value()(); }});
+
+        shared->shortcut.add(UiShortcut{"Show style editor", "ctrl + e",
+                                        [shared]()
+                                        {
+                                            return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_E,
+                                                                   ImGuiInputFlags_RouteGlobal) &&
+                                                   shared->on_show_style_editor.has_value();
+                                        },
+                                        [shared]() { shared->on_show_style_editor.value()(); }});
     }
 
     RootUi::~RootUi()
@@ -60,5 +106,8 @@ namespace avUi
     {
         for (const std::unique_ptr<UiComponent> &child : get_children())
             child->draw();
+
+        this->inter_view_state->shortcut.process();
     }
+
 } // namespace avUi

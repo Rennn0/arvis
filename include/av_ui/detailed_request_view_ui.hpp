@@ -67,6 +67,7 @@ namespace avUi
         void poll_response();
 
         void save_state_change() const;
+        void save_changes();
 
         static std::string build_url(std::string_view base_url, const std::vector<avR::AvRequestParam> &params);
 
