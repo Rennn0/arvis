@@ -83,12 +83,12 @@ namespace avUi
                 {
                     if (ImGui::MenuItem("shortcuts", "ctrl + /"))
                     {
-                        showShortcuts = true;
+                        this->shared_state->on_show_shortcuts.value()();
                     }
 
                     if (ImGui::MenuItem("style editor", "ctrl + e"))
                     {
-                        showStyles = true;
+                        this->shared_state->on_show_style_editor.value()();
                     }
                     ImGui::EndMenu();
                 }

@@ -52,7 +52,7 @@ namespace avUi
         {
             // const auto &latest =
             //     std::ranges::max_element(this->request_list_state->requests, {}, &avR::AvRequest::timestamp);
-            this->shared_state->display_request = this->request_list_state->requests.front().get();
+            this->shared_state->display_request = this->request_list_state->requests.back().get();
         }
 
         this->shared_state->on_new_request.emplace([this]() { this->new_request(); });
