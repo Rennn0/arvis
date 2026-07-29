@@ -233,13 +233,13 @@ namespace avUi
         ImGui::SetNextItemWidth(240.f);
         ImGui::InputTextWithHint("##json_search", "search keys / values", &this->filter);
         ImGui::SameLine();
-        if (ImGui::SmallButton("expand all"))
+        if (ImGui::ArrowButton("expand all", ImGuiDir_Down))
             this->set_open_all = 1;
         ImGui::SameLine();
-        if (ImGui::SmallButton("collapse all"))
+        if (ImGui::ArrowButton("collapse all", ImGuiDir_Up))
             this->set_open_all = 0;
         ImGui::SameLine();
-        if (ImGui::SmallButton("copy json"))
+        if (ImGui::Button("copy json"))
             ImGui::SetClipboardText(this->pretty.c_str());
 
         const float stats_h = ImGui::GetFrameHeightWithSpacing();
@@ -263,7 +263,7 @@ namespace avUi
 
     void JsonTreeView::render_pretty()
     {
-        if (ImGui::SmallButton("copy all"))
+        if (ImGui::Button("copy all"))
             ImGui::SetClipboardText(this->pretty.c_str());
 
         // read-only multiline input so the user can still select and copy arbitrary

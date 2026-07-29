@@ -13,16 +13,19 @@ namespace avR
     public:
         bool show_req_list_view;
         bool show_req_detailed_view;
+        bool is_init = false;
         AvRequest *display_request;
-        avUi::UiShortcut shortcut;
+        std::optional<std::function<void()>> on_display_request_change;
 
+        // key binding actions //////////////////////////////////
+        avUi::UiShortcut shortcutManager;
         std::optional<std::function<void()>> on_new_request;
         std::optional<std::function<void()>> on_save_changes;
         std::optional<std::function<void()>> on_send_request;
         std::optional<std::function<void()>> on_rename_request;
         std::optional<std::function<void()>> on_show_shortcuts;
         std::optional<std::function<void()>> on_show_style_editor;
-
+        //////////////////////////////////////////////////////////
     public:
         AvInterViewSharedState();
         ~AvInterViewSharedState();

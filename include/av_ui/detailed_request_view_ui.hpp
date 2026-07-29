@@ -7,6 +7,7 @@
 #include <av_s/av_request_storage.hpp>
 #include <av_s/av_request_params_storage.hpp>
 #include <av_s/av_request_headers_storage.hpp>
+#include <av_s/av_request_cookies_storage.hpp>
 
 namespace avUi
 {
@@ -29,6 +30,7 @@ namespace avUi
         std::unique_ptr<avS::AvRequestStorage> request_storage;
         std::unique_ptr<avS::AvRequestParamsStorage> request_params_storage;
         std::unique_ptr<avS::AvRequestHeadersStorage> request_headers_storage;
+        std::unique_ptr<avS::AvRequestCookiesStorage> request_cookies_storage;
 
         // networking: the request runs off the UI thread so a slow/dead endpoint never
         // freezes the window. pending_response is declared last so it is destroyed first,
@@ -49,14 +51,17 @@ namespace avUi
         {
             tree,
             pretty,
-            raw
+            raw,
+            res_headers,
+            res_cookies
         };
         ResponseView response_view = ResponseView::raw;
         // parses the response body once per response and renders it as a collapsible tree /
         // pretty dump. Held by pointer so its (heavy) JSON header stays out of this header.
         std::unique_ptr<JsonTreeView> json_view;
 
-        std::future<avNet::response_status> pending_response;
+        // std::future<avNet::response_status> pending_response;
+        std::future<avNet::http_result> pending_response_v2;
 
         void render_header(const ImGuiStyle &style);
         void render_main_content(const ImGuiStyle &style);
@@ -74,6 +79,9 @@ namespace avUi
         void render_tab_params() const;
         void render_tab_headers() const;
         void render_tab_body() const;
-        void render_tab_auth() const;
+        void render_tab_cookies() const;
+
+        void render_shortcuts() const;
+        void render_menu() const;
     };
 } // namespace avUi

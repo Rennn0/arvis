@@ -1,11 +1,16 @@
 #include <av_ui/detailed_request_view_ui.hpp>
 #include <av_ui/json_tree_view.hpp>
-
+#include <string>
+#include <cstdlib>
+#if defined(_WIN32)
+#include <windows.h>
+#include <shellapi.h>
+#endif
 namespace avUi
 {
     std::optional<int64_t> pendingParamDel;
     std::optional<int64_t> pendingHeaderDel;
-    std::optional<int64_t> capturedReqId;
+    std::optional<int64_t> pendingCookieDel;
     bool showStyles = false;
     bool showShortcuts = false;
 
@@ -14,7 +19,8 @@ namespace avUi
           request_storage(std::make_unique<avS::AvRequestStorage>()),
           request_params_storage(std::make_unique<avS::AvRequestParamsStorage>()),
           request_headers_storage(std::make_unique<avS::AvRequestHeadersStorage>()),
-          json_view(std::make_unique<JsonTreeView>())
+          request_cookies_storage(std::make_unique<avS::AvRequestCookiesStorage>()),
+          json_view(std::make_unique<JsonTreeView>()), network_manager(this->request_storage->get_db_path())
     {
         this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove |
                              ImGuiWindowFlags_NoResize;
@@ -23,18 +29,29 @@ namespace avUi
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id, avR::AvState *sharedState) : DetailedRequestViewUi(id)
     {
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
+        this->shared_state->on_display_request_change.emplace(
+            [this]()
+            {
+                int64_t id = this->shared_state->display_request->id;
+                this->shared_state->display_request->params = this->request_params_storage->select_by_req_id(id);
+                this->shared_state->display_request->headers = this->request_headers_storage->select_by_req_id(id);
+                this->shared_state->display_request->cookies = this->request_cookies_storage->select_by_req_id(id);
+            });
 
         this->shared_state->on_send_request.emplace([this]() { this->send_request(); });
         this->shared_state->on_save_changes.emplace([this]() { this->save_changes(); });
         this->shared_state->on_show_shortcuts.emplace([this]() { showShortcuts = true; });
         this->shared_state->on_show_style_editor.emplace([this]() { showStyles = true; });
+
+        if (!this->shared_state->is_init)
+            this->shared_state->on_display_request_change.value()();
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
     {
         // never let the worker outlive this component (and its NetworkManager / response_body).
-        if (this->pending_response.valid())
-            this->pending_response.wait();
+        if (this->pending_response_v2.valid())
+            this->pending_response_v2.wait();
     }
 
     void DetailedRequestViewUi::render()
@@ -50,7 +67,7 @@ namespace avUi
 
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->window_flags))
         {
-            this->shared_state->shortcut.process();
+            this->shared_state->shortcutManager.process();
 
             if (!this->shared_state->display_request)
             {
@@ -63,38 +80,7 @@ namespace avUi
                 return;
             }
 
-            if (ImGui::BeginMenuBar())
-            {
-                if (ImGui::BeginMenu("file"))
-                {
-                    if (ImGui::MenuItem("new request", "ctrl + n"))
-                    {
-                        this->shared_state->on_new_request.value()();
-                    }
-
-                    if (ImGui::MenuItem("save", "ctrl + s"))
-                    {
-                        this->shared_state->on_save_changes.value()();
-                    }
-                    ImGui::EndMenu();
-                }
-
-                if (ImGui::BeginMenu("help"))
-                {
-                    if (ImGui::MenuItem("shortcuts", "ctrl + /"))
-                    {
-                        this->shared_state->on_show_shortcuts.value()();
-                    }
-
-                    if (ImGui::MenuItem("style editor", "ctrl + e"))
-                    {
-                        this->shared_state->on_show_style_editor.value()();
-                    }
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenuBar();
-            }
-
+            this->render_menu();
             // pick up a completed request once per frame so the header (button state) and
             // footer (response) agree within the same frame.
             this->poll_response();
@@ -103,7 +89,7 @@ namespace avUi
             const ImVec2 availRegion = ImGui::GetContentRegionAvail();
 
             if (this->footer_height < 0.f)
-                this->footer_height = availRegion.y * .4f;
+                this->footer_height = availRegion.y * .6f;
 
             const float splitterThikness = 3.f;
             const float minFooter = 50.f;
@@ -147,32 +133,7 @@ namespace avUi
             this->render_footer(style);
             ImGui::EndChild();
 
-            if (showShortcuts)
-                ImGui::OpenPopup("popup_shortcuts");
-
-            if (ImGui::BeginPopupModal("popup_shortcuts", &showShortcuts, ImGuiWindowFlags_AlwaysAutoResize))
-            {
-                ImGui::BeginTable("table_shortcuts", 2);
-
-                for (const UiShortcut &s : this->shared_state->shortcut.shortcuts)
-                {
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text(s.display.c_str());
-                    ImGui::TableSetColumnIndex(1);
-                    ImGui::SameLine();
-                    ImGui::Text(s.binding.c_str());
-                }
-
-                ImGui::EndTable();
-                if (ImGui::IsKeyPressed(ImGuiKey_Escape))
-                {
-                    ImGui::CloseCurrentPopup();
-                    showShortcuts = false;
-                }
-
-                ImGui::EndPopup();
-            }
+            this->render_shortcuts();
         }
 
         ImGui::End();
@@ -242,7 +203,7 @@ namespace avUi
         };
 
         ImGui::SameLine();
-        const bool in_flight = this->pending_response.valid();
+        const bool in_flight = this->pending_response_v2.valid();
         ImGui::BeginDisabled(in_flight);
         if (ImGui::Button(in_flight ? "Sending..." : "Send"))
         {
@@ -266,16 +227,6 @@ namespace avUi
     {
         if (ImGui::BeginTabBar("req_tabs"))
         {
-            if (!capturedReqId.has_value() || capturedReqId.value() != this->shared_state->display_request->id)
-            {
-                capturedReqId = this->shared_state->display_request->id;
-                this->shared_state->display_request->params =
-                    this->request_params_storage->select_by_req_id(capturedReqId.value());
-
-                this->shared_state->display_request->headers =
-                    this->request_headers_storage->select_by_req_id(capturedReqId.value());
-            }
-
             if (ImGui::BeginTabItem("params"))
             {
                 this->render_tab_params();
@@ -294,9 +245,9 @@ namespace avUi
                 ImGui::EndTabItem();
             }
 
-            if (ImGui::BeginTabItem("auth"))
+            if (ImGui::BeginTabItem("cookies"))
             {
-                this->render_tab_auth();
+                this->render_tab_cookies();
                 ImGui::EndTabItem();
             }
 
@@ -339,6 +290,22 @@ namespace avUi
             out += shell_single_quote(key + ": " + value);
         }
 
+        // cookies go out as one `-b "a=1; b=2"` just like the single Cookie line we send.
+        std::string cookies;
+        for (const auto &[name, value] : req.cookies)
+        {
+            if (name.empty())
+                continue;
+            if (!cookies.empty())
+                cookies += "; ";
+            cookies += name + "=" + value;
+        }
+        if (!cookies.empty())
+        {
+            out += " -b ";
+            out += shell_single_quote(cookies);
+        }
+
         if (req.body && !req.body->empty())
         {
             out += " --data ";
@@ -350,49 +317,53 @@ namespace avUi
 
     void DetailedRequestViewUi::render_footer(const ImGuiStyle &style)
     {
-        if (this->pending_response.valid())
+        if (this->pending_response_v2.valid())
         {
             ImGui::TextDisabled("Sending request...");
             return;
         }
 
-        if (this->shared_state->display_request->last_response_body.empty() &&
-            this->shared_state->display_request->last_response_http_code == 0)
+        if (this->shared_state->display_request->last_result.body.empty() &&
+            this->shared_state->display_request->last_result.http_code == 0)
         {
             ImGui::TextDisabled("No response yet - press Send to run the request.");
             return;
         }
 
-        const bool ok = this->shared_state->display_request->last_status == avNet::response_status::Ok;
+        const bool ok = this->shared_state->display_request->last_result.status == avNet::response_status::Ok;
         const ImVec4 statusColor = ok ? ImVec4(0.40f, 0.80f, 0.40f, 1.f) : ImVec4(0.90f, 0.40f, 0.40f, 1.f);
 
-        this->shared_state->display_request->status_code = this->shared_state->display_request->last_response_http_code;
+        this->shared_state->display_request->status_code = this->shared_state->display_request->last_result.http_code;
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextColored(statusColor, "%s",
-                           avNet::NetworkManager::status_text(this->shared_state->display_request->last_status));
+                           avNet::NetworkManager::status_text(this->shared_state->display_request->last_result.status));
         ImGui::SameLine();
-        ImGui::TextDisabled("HTTP %ld", this->shared_state->display_request->last_response_http_code);
+        ImGui::TextDisabled("HTTP %ld", this->shared_state->display_request->last_result.http_code);
         ImGui::SameLine();
-        ImGui::TextDisabled("(%zu bytes)", this->shared_state->display_request->last_response_body.size());
+        ImGui::TextDisabled("(%zu bytes)", this->shared_state->display_request->last_result.body.size());
 
         // copy options sit next to the status line and act on the request we actually sent
         // (last_request) and the response we got back (response_body).
         ImGui::SameLine();
         ImGui::Spacing();
         ImGui::SameLine();
-        if (ImGui::SmallButton("copy"))
+        if (ImGui::Button("copy"))
             ImGui::OpenPopup("##copy_options");
         if (ImGui::BeginPopup("##copy_options"))
         {
             if (ImGui::Selectable("copy req as curl"))
                 ImGui::SetClipboardText(format_as_curl(this->shared_state->display_request->last_request).c_str());
             if (ImGui::Selectable("copy raw response"))
-                ImGui::SetClipboardText(this->shared_state->display_request->last_response_body.c_str());
+                ImGui::SetClipboardText(this->shared_state->display_request->last_result.body.c_str());
             if (ImGui::Selectable("copy request url"))
                 ImGui::SetClipboardText(this->shared_state->display_request->last_request.url.c_str());
             ImGui::EndPopup();
         }
+
+        ImGui::SameLine();
+        ImGui::Text("%lld ms",
+                    static_cast<long long>(this->shared_state->display_request->last_result.elapsed_mc / 1000));
 
         ImGui::Separator();
 
@@ -407,7 +378,7 @@ namespace avUi
                 const bool active = this->response_view == mode;
                 if (active)
                     ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                if (ImGui::SmallButton(label))
+                if (ImGui::Button(label))
                     this->response_view = mode;
                 if (active)
                     ImGui::PopStyleColor();
@@ -415,6 +386,10 @@ namespace avUi
             mode_tab("Tree", ResponseView::tree);
             ImGui::SameLine();
             mode_tab("Pretty", ResponseView::pretty);
+            ImGui::SameLine();
+            mode_tab("Response Headers", ResponseView::res_headers);
+            ImGui::SameLine();
+            mode_tab("Response Cookies", ResponseView::res_cookies);
             ImGui::SameLine();
             mode_tab("Raw", ResponseView::raw);
         }
@@ -427,6 +402,12 @@ namespace avUi
         {
             this->json_view->render_pretty();
         }
+        else if (this->response_view == ResponseView::res_cookies)
+        {
+        }
+        else if (this->response_view == ResponseView::res_headers)
+        {
+        }
         else
         {
             // read-only body view fills the remaining footer space. It wraps at the child's right
@@ -434,9 +415,9 @@ namespace avUi
             if (ImGui::BeginChild("##response_body_view", ImVec2(0, 0)))
             {
                 ImGui::PushTextWrapPos(0.f); // 0 == wrap at the child's right edge
-                ImGui::TextUnformatted(this->shared_state->display_request->last_response_body.data(),
-                                       this->shared_state->display_request->last_response_body.data() +
-                                           this->shared_state->display_request->last_response_body.size());
+                ImGui::TextUnformatted(this->shared_state->display_request->last_result.body.data(),
+                                       this->shared_state->display_request->last_result.body.data() +
+                                           this->shared_state->display_request->last_result.body.size());
                 ImGui::PopTextWrapPos();
             }
             ImGui::EndChild();
@@ -449,10 +430,12 @@ namespace avUi
             return;
 
         // one request at a time; ignore the button while a fetch is in flight.
-        if (this->pending_response.valid())
+        if (this->pending_response_v2.valid())
             return;
 
         avR::AvRequest *req = this->shared_state->display_request;
+        req->timestamp = this->root.get_timestamp();
+        req->pending_save = true;
 
         // params are the source of truth for the query string: assemble the final url from
         // them, reflect it back into the editable url, and persist.
@@ -460,9 +443,10 @@ namespace avUi
         req->url = url;
         this->save_state_change();
 
-        // snapshot the request (method + url + included headers + body) into a self-contained
-        // descriptor the worker owns. It copies the header strings, so the worker never races
-        // against edits to display_request on the UI thread while the fetch is in flight.
+        // snapshot the request (method + url + included headers + cookies + body) into a
+        // self-contained descriptor the worker owns. It copies the header/cookie strings, so the
+        // worker never races against edits to display_request on the UI thread while the fetch
+        // is in flight.
         avNet::http_request request;
         request.method = req->method;
         request.url = std::move(url);
@@ -473,6 +457,12 @@ namespace avUi
                 continue;
             request.headers.emplace_back(header.key, header.value);
         }
+        for (const avR::AvRequestCookie &cookie : req->cookies)
+        {
+            if (!cookie.included || cookie.key.empty())
+                continue;
+            request.cookies.emplace_back(cookie.key, cookie.value);
+        }
 
         // keep an independent copy of exactly what we send so the footer can reproduce it
         // (copy as cURL, etc.) without touching the worker's moved-in copy.
@@ -481,29 +471,28 @@ namespace avUi
         // reset the destination on the UI thread before the worker starts writing to it.
         // std::launch::async establishes a happens-before with the worker; the UI thread only
         // reads response_body / response_http_code again after the future is ready (poll_response).
-        this->shared_state->display_request->last_response_body.clear();
-        this->shared_state->display_request->last_response_http_code = 0;
+        this->shared_state->display_request->last_result.body.clear();
+        this->shared_state->display_request->last_result.http_code = 0;
 
         // run off the UI thread so a slow/dead endpoint never freezes the window.
-        this->pending_response = std::async(std::launch::async,
-                                            [this, request = std::move(request)]()
-                                            {
-                                                return this->network_manager.send(
-                                                    request, this->shared_state->display_request->last_response_body,
-                                                    &this->shared_state->display_request->last_response_http_code);
-                                            });
+        /*this->pending_response*/ this->pending_response_v2 = std::async(
+            std::launch::async, [this, request = std::move(request)]() { return this->network_manager.send(request); });
     }
 
     void DetailedRequestViewUi::poll_response()
     {
-        if (this->pending_response.valid() &&
-            this->pending_response.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        if (this->pending_response_v2.valid() &&
+            this->pending_response_v2.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {
-            this->shared_state->display_request->last_status = this->pending_response.get();
+            // this->shared_state->display_request->last_status = this->pending_response.get();
 
-            // parse the body once, here, rather than every frame in the footer. Default to the
-            // tree view when it is JSON, otherwise fall back to the raw text view.
-            this->json_view->set_source(this->shared_state->display_request->last_response_body);
+            // // parse the body once, here, rather than every frame in th e footer. Default to the
+            // // tree view when it is JSON, otherwise fall back to the raw text view.
+            // this->json_view->set_source(this->shared_state->display_request->last_response_body);
+            // this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
+
+            this->shared_state->display_request->last_result = this->pending_response_v2.get();
+            this->json_view->set_source(this->shared_state->display_request->last_result.body);
             this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
         }
     }
@@ -518,6 +507,7 @@ namespace avUi
         this->request_storage->upsert(this->shared_state->display_request);
         this->request_params_storage->upsert(this->shared_state->display_request->params);
         this->request_headers_storage->upsert(this->shared_state->display_request->headers);
+        this->request_cookies_storage->upsert(this->shared_state->display_request->cookies);
         this->shared_state->display_request->pending_save = false;
     }
 
@@ -580,7 +570,7 @@ namespace avUi
     }
     void DetailedRequestViewUi::render_tab_params() const
     {
-        avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
+        // avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchSame;
@@ -682,16 +672,10 @@ namespace avUi
             req->url = build_url(req->url, req->params);
             this->save_state_change();
         }
-
-        // if (this->shared_state->pending_save)
-        // {
-        //     this->request_params_storage->upsert(this->shared_state->display_request->params);
-        //     this->shared_state->pending_save = false;
-        // }
     }
     void DetailedRequestViewUi::render_tab_headers() const
     {
-        avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
+        // avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchSame;
@@ -745,11 +729,14 @@ namespace avUi
             this->shared_state->display_request->pending_save = true;
         }
 
-        // if (this->shared_state->pending_save = true)
-        // {
-        //     this->request_headers_storage->upsert(this->shared_state->display_request->headers);
-        //     this->shared_state->pending_save = false;
-        // }
+        if (pendingHeaderDel.has_value())
+        {
+            const int64_t id = pendingHeaderDel.value();
+            this->request_headers_storage->del(id);
+            std::erase_if(this->shared_state->display_request->headers,
+                          [id](avR::AvRequestParam &p) { return p.id == id; });
+            pendingHeaderDel.reset();
+        }
     }
     void DetailedRequestViewUi::render_tab_body() const
     {
@@ -759,7 +746,151 @@ namespace avUi
         ImGui::InputTextMultiline("##body", &this->shared_state->display_request->body.value(),
                                   ImVec2(avail.x, avail.y), ImGuiInputTextFlags_AllowTabInput);
     }
-    void DetailedRequestViewUi::render_tab_auth() const
+    void DetailedRequestViewUi::render_tab_cookies() const
     {
+        // avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                ImGuiTableFlags_SizingStretchSame;
+
+        if (ImGui::BeginTable("tab_cookies", 4, flags, ImVec2(0, 0), 0.f))
+        {
+            ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("include", ImGuiTableColumnFlags_WidthStretch);
+            // ImGui::TableSetupColumn("delete", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableHeadersRow();
+
+            ImGuiListClipper clipper;
+            const size_t count = this->shared_state->display_request->cookies.size();
+            clipper.Begin(count);
+            while (clipper.Step())
+            {
+                for (int row_n = clipper.DisplayStart; row_n < clipper.DisplayEnd; row_n++)
+                {
+                    avR::AvRequestCookie *cookie = &this->shared_state->display_request->cookies[row_n];
+                    ImGui::PushID(cookie);
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::InputText("##k", &cookie->key);
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                        this->shared_state->display_request->pending_save = true;
+                    ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    ImGui::InputText("##v", &cookie->value);
+                    if (ImGui::IsItemDeactivatedAfterEdit())
+                        this->shared_state->display_request->pending_save = true;
+                    ImGui::TableNextColumn();
+                    if (ImGui::Checkbox("##inc", &cookie->included))
+                        this->shared_state->display_request->pending_save = true;
+
+                    ImGui::TableNextColumn();
+                    if (ImGui::Button("delete"))
+                        pendingCookieDel = cookie->id;
+                    ImGui::PopID();
+                }
+            }
+
+            ImGui::EndTable();
+        }
+
+        if (ImGui::Button("add cookie"))
+        {
+            this->shared_state->display_request->cookies.push_back(
+                avR::AvRequestCookie{avR::AvRequestParam{.request_id = this->shared_state->display_request->id}});
+            this->shared_state->display_request->pending_save = true;
+        }
+
+        if (pendingCookieDel.has_value())
+        {
+            const int64_t id = pendingCookieDel.value();
+            this->request_cookies_storage->del(id);
+            std::erase_if(this->shared_state->display_request->cookies,
+                          [id](avR::AvRequestParam &p) { return p.id == id; });
+            pendingCookieDel.reset();
+        }
+    }
+    void DetailedRequestViewUi::render_shortcuts() const
+    {
+        if (!showShortcuts)
+            return;
+
+        ImGui::OpenPopup("shortcuts");
+
+        if (ImGui::BeginPopupModal("shortcuts", &showShortcuts, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::BeginTable("table_shortcuts", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg);
+            ImGui::TableSetupColumn("action", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("binding", ImGuiTableColumnFlags_WidthFixed);
+
+            for (const UiShortcut &s : this->shared_state->shortcutManager.shortcuts)
+            {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text(s.display.c_str());
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SameLine();
+                ImGui::Text(s.binding.c_str());
+            }
+
+            ImGui::EndTable();
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                ImGui::CloseCurrentPopup();
+                showShortcuts = false;
+            }
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("saved:");
+            ImGui::SameLine();
+            std::string dbPath{this->request_storage->get_db_path()};
+            if (ImGui::TextLink(dbPath.c_str()))
+            {
+#if defined(_WIN32)
+                ShellExecuteA(nullptr, "open", dbPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+#elif defined(__APPLE__)
+                std::system(("open -R \"" + dbPath + "\"").c_str());
+#else
+                std::system(("xdg-open \"" + dbPath + "\"").c_str());
+#endif
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+    void DetailedRequestViewUi::render_menu() const
+    {
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("file"))
+            {
+                if (ImGui::MenuItem("new request", "ctrl + n"))
+                {
+                    this->shared_state->on_new_request.value()();
+                }
+
+                if (ImGui::MenuItem("save", "ctrl + s"))
+                {
+                    this->shared_state->on_save_changes.value()();
+                }
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("help"))
+            {
+                if (ImGui::MenuItem("shortcuts", "ctrl + /"))
+                {
+                    this->shared_state->on_show_shortcuts.value()();
+                }
+
+                if (ImGui::MenuItem("style editor", "ctrl + e"))
+                {
+                    this->shared_state->on_show_style_editor.value()();
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
     }
 } // namespace avUi

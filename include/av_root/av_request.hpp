@@ -24,6 +24,10 @@ namespace avR
     {
     };
 
+    struct AvRequestCookie : public AvRequestParam
+    {
+    };
+
     /// @brief One user-created request entry (the app-side model the UI lists,
     ///        selects and displays; sending it is wired up later).
     struct AvRequest
@@ -35,6 +39,7 @@ namespace avR
         std::string url = "https://example.com";
         std::vector<AvRequestParam> params;
         std::vector<AvRequestHeader> headers;
+        std::vector<AvRequestCookie> cookies;
         std::optional<std::string> body;
         std::optional<std::string> title;
         std::optional<int> status_code;
@@ -42,9 +47,10 @@ namespace avR
         const std::string display_name() const { return title.value_or("request#" + std::to_string(id)); }
 
         avNet::http_request last_request;
-        avNet::response_status last_status;
-        std::string last_response_body;
-        long last_response_http_code = 0;
+        avNet::http_result last_result;
+        // avNet::response_status last_status;
+        //  std::string last_response_body;
+        // long last_response_http_code = 0;
         bool pending_save = false;
     };
 

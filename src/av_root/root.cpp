@@ -1,6 +1,7 @@
 #include <av_root/root.hpp>
 #include <chrono>
 #include <ctime>
+#include <cctype>
 namespace avR
 {
     AvRoot::AvRoot(std::string id) : id(std::move(id))

@@ -17,7 +17,7 @@ namespace avR
 
         bool is_today(int64_t ts) const;
         std::string timestamp_to_date(int64_t ts) const;
-        const int64_t get_timestamp()const;
+        const int64_t get_timestamp() const;
 
     private:
         void log_core(std::ostream &out, std::string_view level, std::string_view msg) const noexcept;

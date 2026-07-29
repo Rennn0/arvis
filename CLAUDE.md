@@ -6,6 +6,47 @@ conventions so you can be productive immediately.
 
 ---
 
+## 0. HARD RULE — never edit code, write a proposal instead
+
+**The owner of this repo writes all the code. AI assistants do not.**
+
+Whenever a request would require *any* change to the source tree — new files,
+edits, deletions, renames, `CMakeLists.txt` entries, config tweaks — **do not
+touch a single file.** Instead:
+
+1. Write the complete proposal to a markdown file under **`notes.dev/`**
+   (git-ignored via the existing `*.dev*` rule), named after the task, e.g.
+   `notes.dev/cookie_storage_plan.md`.
+2. In that file, give the **full** intended content — whole functions, whole
+   headers, exact diffs, exact `CMakeLists.txt` lines — not a summary. The owner
+   copies from it and types the real change themselves, so anything left vague is
+   work they have to redo.
+3. Reply in chat with the file path and a short summary. Nothing else.
+
+Applies to:
+
+- All of `include/`, `src/`, `scripts/`, `assets/`, `CMakeLists.txt`,
+  `CMakePresets.json`, `vcpkg.json`, `.gitignore`, and any other tracked file.
+- Scaffolding scripts (`scripts/new_class.*`) — **do not run them**, they create
+  files and edit `CMakeLists.txt`. Write out what they *would* generate instead.
+- Refactors, bug fixes, and one-line changes alike. "It's tiny" is not an
+  exception.
+- Git-mutating commands: no `commit`, `add`, `checkout`, `restore`, `stash`,
+  `rm`, `mv`.
+
+Still allowed without asking:
+
+- Reading, searching, and `git` inspection (`status`, `diff`, `log`, `show`).
+- Configuring, building, and running the app to reproduce or verify behaviour.
+- Writing/updating files inside `notes.dev/` (and other `*.dev*` paths).
+- Editing this `CLAUDE.md` when explicitly asked to record a rule.
+
+If a request seems to *require* editing to be useful, it doesn't — write the
+proposal. The only way this rule is bypassed is the owner saying so explicitly,
+for that one request.
+
+---
+
 ## 1. What this project is
 
 **arvis** is a small, **cross-platform (Windows / Linux / macOS) C++20 desktop

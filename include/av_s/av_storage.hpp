@@ -22,6 +22,7 @@ namespace avS
     protected:
         const long appSchemaVersion = 2;
         std::string db_path;
+        std::string db_dir;
         std::unique_ptr<SQLite::Database> db;
 
         int get_schema_version() const;

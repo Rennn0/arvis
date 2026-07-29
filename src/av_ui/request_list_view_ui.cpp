@@ -1,10 +1,9 @@
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
-
 #include <ranges>
 #include <algorithm>
 #include <chrono>
-
+// BUG ertianad shlis
 namespace avUi
 {
     bool try_swap(std::vector<std::shared_ptr<avR::AvRequest>> &vec, avR::AvRequest *r1, avR::AvRequest *r2)
@@ -36,10 +35,6 @@ namespace avUi
           request_storage(std::make_unique<avS::AvRequestStorage>())
     {
         this->windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
-
-        // this->style.frame_rounding = 10.f;
-        // this->style.frame_padding = ImVec2(8, 8);
-        // this->style.window_padding = ImVec2(20, 5);
     }
 
     RequstListViewUi::RequstListViewUi(std::string id, avR::AvState *sharedState) : RequstListViewUi(id)
@@ -50,9 +45,9 @@ namespace avUi
 
         if (this->request_list_state->requests.size() > 0)
         {
-            // const auto &latest =
-            //     std::ranges::max_element(this->request_list_state->requests, {}, &avR::AvRequest::timestamp);
-            this->shared_state->display_request = this->request_list_state->requests.back().get();
+            const auto &latest =
+                std::ranges::max_element(this->request_list_state->requests, {}, &avR::AvRequest::timestamp);
+            this->shared_state->display_request = latest->get();
         }
 
         this->shared_state->on_new_request.emplace([this]() { this->new_request(); });
@@ -243,10 +238,7 @@ namespace avUi
         if (ImGui::Selectable("##row", is_selected, ImGuiSelectableFlags_None, ImVec2(0.0f, row_height)))
         {
             this->shared_state->display_request = request;
-            // this->shared_state->display_request->last_request = {};
-            // this->shared_state->display_request->last_response_body.clear();
-            // this->shared_state->display_request->last_response_http_code = 0;
-            // this->shared_state->display_request->last_status = {};
+            this->shared_state->on_display_request_change.value()();
         }
 
         if (ImGui::BeginDragDropSource())

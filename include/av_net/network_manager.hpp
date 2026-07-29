@@ -44,8 +44,10 @@ namespace avNet
         long http_code = 0;     ///< HTTP status code (0 if the request never completed)
         std::string body;       ///< raw response body
         std::string saved_path; ///< file the body was written to (empty on failure)
+        std::vector<std::pair<std::string, std::string>> response_headers;
+        std::vector<std::pair<std::string, std::string>> response_cookies;
+        long long elapsed_mc = 0;
     };
-
     /// @brief self-contained description of a request to send. It owns its own
     ///        strings so a worker thread can keep a snapshot alive independently
     ///        of any UI-side model that produced it.
@@ -55,6 +57,9 @@ namespace avNet
         std::string url;
         /// header lines as (key, value) pairs; empty keys are skipped when sending.
         std::vector<std::pair<std::string, std::string>> headers;
+        /// cookies as (name, value) pairs; joined into one `Cookie:` line when sending.
+        /// Empty names are skipped.
+        std::vector<std::pair<std::string, std::string>> cookies;
         /// request body; sent for methods that carry one (POST/PUT/PATCH/DELETE).
         std::optional<std::string> body;
     };
@@ -101,7 +106,7 @@ namespace avNet
 
     public:
         /// @brief global init
-        NetworkManager();
+        NetworkManager(std::string_view path);
 
         /// @brief global cleanup
         ~NetworkManager();
@@ -130,12 +135,13 @@ namespace avNet
         /// @param out_body buffer that receives the response body (or the error text on failure)
         /// @param out_http_code optional out-param that receives the HTTP status code
         /// @return status of the request
-        response_status send(const http_request &request, std::string &out_body,
-                             long *out_http_code = nullptr) const;
+        response_status send(const http_request &request, std::string &out_body, long *out_http_code = nullptr) const;
+
+        http_result send(const http_request &request) const;
 
     private:
         avR::AvRoot root;
-
+        std::filesystem::path save_path;
         /// @brief sends the given request, writes the response body into the
         ///        responses folder, and returns the full result (status, HTTP
         ///        code, body, saved path) for display.

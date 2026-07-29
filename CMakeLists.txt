@@ -30,6 +30,8 @@ find_package(nlohmann_json CONFIG REQUIRED)
 # OpenGL is the cross-platform rendering backend for the GUI (provided by the OS).
 find_package(OpenGL REQUIRED)
 
+find_package(Boost CONFIG REQUIRED)
+
 # ---------------------------------------------------------------------------
 # GUI dependencies — cross-platform (Windows / Linux / macOS).
 #
@@ -119,13 +121,14 @@ add_executable(arvis
     src/av_s/av_request_params_storage.cpp
     src/av_s/av_request_headers_storage.cpp
     src/av_ui/ui_shortcut.cpp
+    src/av_s/av_request_cookies_storage.cpp
 )
 
 target_include_directories(arvis PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(arvis PRIVATE CURL::libcurl imgui SQLiteCpp nlohmann_json::nlohmann_json)
+target_link_libraries(arvis PRIVATE CURL::libcurl imgui SQLiteCpp nlohmann_json::nlohmann_json Boost::headers)
 
 get_target_property(arvis_all_sources arvis SOURCES)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${arvis_all_sources})

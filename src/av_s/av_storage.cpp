@@ -6,7 +6,7 @@
 namespace avS
 {
 
-    std::filesystem::path get_path()
+    std::filesystem::path get_save_dir()
     {
         namespace fs = std::filesystem;
 #if defined(_WIN32)
@@ -22,11 +22,11 @@ namespace avS
 #endif
         dir /= "arvis";
         std::filesystem::create_directories(dir);
-        return dir / "_av_.db";
+        return dir;
     }
 
     AvStorage::AvStorage()
-        : db_path(get_path().string()),
+        : db_path((get_save_dir() / "_av_.db").string()), db_dir(get_save_dir().string()),
           db(std::make_unique<SQLite::Database>(db_path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE))
     {
         this->db->exec("PRAGMA foreign_keys=ON;");
@@ -40,7 +40,7 @@ namespace avS
 
     std::string_view AvStorage::get_db_path() const
     {
-        return this->db_path;
+        return this->db_dir;
     }
 
     int AvStorage::get_schema_version() const

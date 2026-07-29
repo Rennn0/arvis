@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": [
     "curl",
-    "nlohmann-json"
+    "nlohmann-json",
+    "boost-algorithm"
   ]
 }
