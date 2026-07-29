@@ -402,11 +402,53 @@ namespace avUi
         {
             this->json_view->render_pretty();
         }
-        else if (this->response_view == ResponseView::res_cookies)
+        else if (this->response_view == ResponseView::res_cookies) // TODO rewrite this
         {
+            ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                    ImGuiTableFlags_SizingStretchSame;
+            if (ImGui::BeginTable("res_cokies", 2, flags, ImVec2(0, 0), 0.f))
+            {
+                ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableHeadersRow();
+
+                const auto &cookies = this->shared_state->display_request->last_result.response_cookies;
+                for (const auto &pair : cookies)
+                {
+                    ImGui::PushID(&pair);
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(pair.first.c_str());
+                    ImGui::TableNextColumn();
+                    ImGui::TextWrapped("%s", pair.second.c_str());
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
         }
         else if (this->response_view == ResponseView::res_headers)
         {
+            ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                    ImGuiTableFlags_SizingStretchSame;
+            if (ImGui::BeginTable("res_headers", 2, flags, ImVec2(0, 0), 0.f))
+            {
+                ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableHeadersRow();
+
+                const auto &headers = this->shared_state->display_request->last_result.response_headers;
+                for (const auto &pair : headers)
+                {
+                    ImGui::PushID(&pair);
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(pair.first.c_str());
+                    ImGui::TableNextColumn();
+                    ImGui::TextWrapped("%s", pair.second.c_str());
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
         }
         else
         {
