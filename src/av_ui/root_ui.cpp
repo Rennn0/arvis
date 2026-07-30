@@ -1,6 +1,7 @@
 #include <av_ui/root_ui.hpp>
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/detailed_request_view_ui.hpp>
+#include <av_ui/search_view_ui.hpp>
 #include <av_root/av_inter_view_shared_state.hpp>
 #include "fonts/cousine_regular.h"
 #include "fonts/roboto_medium.h"
@@ -76,6 +77,7 @@ namespace avUi
         avR::AvInterViewSharedState *shared = this->inter_view_state.get();
         this->add_child(std::make_unique<avUi::RequstListViewUi>("req_list_view", shared));
         this->add_child(std::make_unique<avUi::DetailedRequestViewUi>("detailed_view", shared));
+        this->add_child(std::make_unique<avUi::SearchViewUi>("search_view", shared));
 
         shared->shortcutManager.add(UiShortcut{"New request", "ctrl + n",
                                                [shared]()

@@ -122,6 +122,7 @@ add_executable(arvis
     src/av_s/av_request_headers_storage.cpp
     src/av_ui/ui_shortcut.cpp
     src/av_s/av_request_cookies_storage.cpp
+    src/av_ui/search_view_ui.cpp
 )
 
 target_include_directories(arvis PRIVATE

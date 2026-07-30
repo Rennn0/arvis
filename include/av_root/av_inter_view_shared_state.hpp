@@ -13,6 +13,7 @@ namespace avR
     public:
         bool show_req_list_view;
         bool show_req_detailed_view;
+        bool show_search_view = false;
         bool is_init = false;
         AvRequest *display_request;
         std::optional<std::function<void()>> on_display_request_change;
