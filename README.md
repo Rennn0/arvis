@@ -116,8 +116,8 @@ cmake --build --preset windows-debug    # or: windows-release
 ---
 
 ## Todos
- - response info
- - reopen last modified req
+ - response info (x)
+ - reopen last modified req (x)
  - finder shortcut/window for requests
  - environment system (inlines defined variable properties into requests)
  - schemas for requests (env gets attached)

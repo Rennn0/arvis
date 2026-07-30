@@ -373,7 +373,7 @@ namespace avUi
         const bool json = this->json_view->is_json();
         if (json)
         {
-            const auto mode_tab = [&](const char *label, ResponseView mode)
+            const auto mode_tab = [&](const char *label, ResponseView mode, USHORT count = 0)
             {
                 const bool active = this->response_view == mode;
                 if (active)
@@ -382,14 +382,34 @@ namespace avUi
                     this->response_view = mode;
                 if (active)
                     ImGui::PopStyleColor();
+                if (count < 1)
+                    return;
+                char buf[16];
+                if (count > 99)
+                    snprintf(buf, sizeof(buf), "99+");
+                else
+                    snprintf(buf, sizeof(buf), "%d", count);
+
+                ImDrawList *dl = ImGui::GetWindowDrawList();
+                const ImVec2 ts = ImGui::CalcTextSize(buf);
+
+                const float pad_x = 3.f;
+                const float h = ts.y;
+                const float w = (ts.x + pad_x * 2.0f > h) ? ts.x + pad_x * 2.0f : h; // pill, min circular
+                const ImVec2 topRight = ImVec2(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
+                const ImVec2 bMin = ImVec2(topRight.x - w * .5, topRight.y - h * .5);
+                const ImVec2 bMax = ImVec2(bMin.x + w, bMin.y + h);
+                dl->AddRectFilled(bMin, bMax, IM_COL32(120, 130, 145, 180), h * 0.5f); // rounded = pill
+                dl->AddText(ImVec2(bMin.x + (w - ts.x) * 0.5f, bMin.y + (h - ts.y) * 0.5f), IM_COL32_WHITE, buf);
             };
+            const avR::AvRequest *rp = this->shared_state->display_request;
             mode_tab("Tree", ResponseView::tree);
             ImGui::SameLine();
             mode_tab("Pretty", ResponseView::pretty);
             ImGui::SameLine();
-            mode_tab("Response Headers", ResponseView::res_headers);
+            mode_tab("Response Headers", ResponseView::res_headers, rp->last_result.response_headers.size());
             ImGui::SameLine();
-            mode_tab("Response Cookies", ResponseView::res_cookies);
+            mode_tab("Response Cookies", ResponseView::res_cookies, rp->last_result.response_cookies.size());
             ImGui::SameLine();
             mode_tab("Raw", ResponseView::raw);
         }
@@ -428,6 +448,8 @@ namespace avUi
         }
         else if (this->response_view == ResponseView::res_headers)
         {
+            avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
+
             ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                     ImGuiTableFlags_SizingStretchSame;
             if (ImGui::BeginTable("res_headers", 2, flags, ImVec2(0, 0), 0.f))
@@ -442,9 +464,12 @@ namespace avUi
                     ImGui::PushID(&pair);
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
+                    ImGui::AlignTextToFramePadding();
                     ImGui::TextUnformatted(pair.first.c_str());
                     ImGui::TableNextColumn();
-                    ImGui::TextWrapped("%s", pair.second.c_str());
+                    ImGui::InputTextMultiline("##val", const_cast<char *>(pair.second.c_str()), pair.second.size() + 1,
+                                              ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 2),
+                                              ImGuiInputTextFlags_ReadOnly);
                     ImGui::PopID();
                 }
                 ImGui::EndTable();
