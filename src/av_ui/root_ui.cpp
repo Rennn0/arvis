@@ -97,6 +97,15 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_send_request.value()(); }});
 
+        shared->shortcutManager.add(UiShortcut{"Search", "ctrl + f",
+                                               [shared]()
+                                               {
+                                                   return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F,
+                                                                          ImGuiInputFlags_RouteGlobal) &&
+                                                          shared->on_show_search.has_value();
+                                               },
+                                               [shared]() { shared->on_show_search.value()(); }});
+
         shared->shortcutManager.add(UiShortcut{"Save changes", "ctrl + s",
                                                [shared]()
                                                {

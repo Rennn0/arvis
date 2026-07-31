@@ -12,5 +12,49 @@
   },
   "C_Cpp.formatting": "clangFormat",
   "C_Cpp.clang_format_style": "file",
-  "C_Cpp.clang_format_sortIncludes": false
+  "C_Cpp.clang_format_sortIncludes": false,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.vs": true,
+    "**/.idea": true,
+    "external": true,
+    "vcpkg_installed": true,
+    "build": true,
+    "out": true,
+    "**/CMakeFiles": true
+  },
+  "search.exclude": {
+    "external": true,
+    "vcpkg_installed": true,
+    "build": true,
+    "out": true,
+    "notes.dev": true,
+    "responses.dev": true,
+    "**/*.dev*": true,
+    "**/CMakeFiles": true,
+    "**/compile_commands.json": true,
+    "imgui.ini": true
+  },
+  "search.useIgnoreFiles": true,
+  "search.followSymlinks": false,
+  "C_Cpp.files.exclude": {
+    "**/.vscode": true,
+    "**/.vs": true,
+    "**/.git": true,
+    "**/CMakeFiles": true,
+    "external": true,
+    "vcpkg_installed": true,
+    "build": true,
+    "out": true,
+    "notes.dev": true,
+    "responses.dev": true
+  },
+  "C_Cpp.exclusionPolicy": "checkFilesAndFolders",
+  "files.watcherExclude": {
+    "**/external/**": true,
+    "**/vcpkg_installed/**": true,
+    "**/build/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
+  }
 }

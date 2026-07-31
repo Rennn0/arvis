@@ -5,6 +5,7 @@
 #include <av_root/av_state.hpp>
 #include <av_root/av_request.hpp>
 #include <av_ui/ui_shortcut.hpp>
+#include <av_root/av_request_list_state.hpp>
 
 namespace avR
 {
@@ -16,6 +17,7 @@ namespace avR
         bool show_search_view = false;
         bool is_init = false;
         AvRequest *display_request;
+        avR::AvRequestListState* request_list_state;
         std::optional<std::function<void()>> on_display_request_change;
 
         // key binding actions //////////////////////////////////
@@ -26,6 +28,7 @@ namespace avR
         std::optional<std::function<void()>> on_rename_request;
         std::optional<std::function<void()>> on_show_shortcuts;
         std::optional<std::function<void()>> on_show_style_editor;
+        std::optional<std::function<void()>> on_show_search;
         //////////////////////////////////////////////////////////
     public:
         AvInterViewSharedState();

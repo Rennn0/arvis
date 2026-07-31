@@ -2,12 +2,6 @@ build/
 .build/
 .out/
 out/
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/c_cpp_properties.json
-!.vscode/launch.json
-!.vscode/tasks.json
 *.dev*
 .vs
 *.db

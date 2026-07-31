@@ -40,6 +40,7 @@ namespace avUi
     RequstListViewUi::RequstListViewUi(std::string id, avR::AvState *sharedState) : RequstListViewUi(id)
     {
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
+        this->shared_state->request_list_state = this->request_list_state.get();
         this->request_list_state->requests = this->request_storage->select_all();
         this->request_list_state->environment = "Development"; // #TODO roca env sys aewyoba esec sheicvleba
 
