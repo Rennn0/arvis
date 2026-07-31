@@ -373,7 +373,7 @@ namespace avUi
         const bool json = this->json_view->is_json();
         if (json)
         {
-            const auto mode_tab = [&](const char *label, ResponseView mode, USHORT count = 0)
+            const auto mode_tab = [&](const char *label, ResponseView mode, unsigned short count = 0)
             {
                 const bool active = this->response_view == mode;
                 if (active)
@@ -930,7 +930,7 @@ namespace avUi
     {
         if (ImGui::BeginMenuBar())
         {
-            if (ImGui::BeginMenu("file"))
+            if (ImGui::BeginMenu("actions"))
             {
                 if (ImGui::MenuItem("new request", "ctrl + n"))
                 {

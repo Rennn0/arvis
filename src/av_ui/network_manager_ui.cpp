@@ -99,16 +99,18 @@ namespace avUi
 
         std::unique_ptr<avR::UiComponent> rootUi = std::make_unique<avUi::RootUi>("root");
 
-        double lastFrame = 0.;
+        // double lastFrame = 0.;
         while (!glfwWindowShouldClose(this->window))
         {
-            glfwWaitEventsTimeout(this->fps);
+            // glfwWaitEventsTimeout(this->fps);
 
-            double now = glfwGetTime();
-            double delta = now - lastFrame;
-            if (delta < this->fps)
-                continue;
-            lastFrame = now;
+            // double now = glfwGetTime();
+            // double delta = now - lastFrame;
+            // if (delta < this->fps)
+            //     continue;
+            // lastFrame = now;
+
+            glfwWaitEvents();
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();

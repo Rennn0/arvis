@@ -22,9 +22,13 @@ namespace avUi
         std::size_t h = 0;
         std::size_t n = 0;
         int consecutive = 0;
-        int first_hit = -1;
-        bool prev_boundary = true;
+        int firstHit = -1;
+        bool prevBoundary = true;
 
+        // ბიოგრაფია (9/4) ~ 2
+        // იფ -> 25 -> 50 -> 49,47 -> 47 score
+        // ბ -> 25 -> 23 score
+        // გრა -> 25 -> 56 -> 93 -> 90,88 -> 88 score
         while (h < haystack.size() && n < needle.size())
         {
             const unsigned char hc = static_cast<unsigned char>(haystack[h]);
@@ -32,11 +36,11 @@ namespace avUi
 
             if (std::tolower(hc) == std::tolower(nc))
             {
-                if (first_hit < 0)
-                    first_hit = static_cast<int>(h);
+                if (firstHit < 0)
+                    firstHit = static_cast<int>(h);
                 score += 10;
                 score += consecutive * 6;
-                if (prev_boundary)
+                if (prevBoundary)
                     score += 15;
                 ++consecutive;
                 ++n;
@@ -46,14 +50,14 @@ namespace avUi
                 consecutive = 0;
             }
 
-            prev_boundary = (std::isalnum(hc) == 0);
+            prevBoundary = (std::isalnum(hc) == 0);
             ++h;
         }
 
         if (n != needle.size())
             return false;
 
-        score -= first_hit;
+        score -= firstHit;
         score -= static_cast<int>(haystack.size()) / 4;
         return true;
     }
@@ -303,8 +307,7 @@ namespace avUi
         std::stable_sort(this->hits.begin(), this->hits.end(),
                          [](const Hit &a, const Hit &b) { return a.score > b.score; });
 
-        this->selected = std::min(this->selected, static_cast<int>(hits.size() - 1));
-        this->selected = std::max(this->selected, 0);
+        this->selected = std::max(std::min(this->selected, static_cast<int>(hits.size() - 1)), 0);
         dirty = false;
     }
     void SearchViewUi::move_selection(int delta)
@@ -313,7 +316,7 @@ namespace avUi
             return;
 
         const int n = this->hits.size();
-        this->selected = ((this->selected + delta) % n + n) % n;
+        this->selected = ((this->selected + delta) % n + n) % n; // 10  --d(1)-> 1, 5 --d(-1)-> 4, 0 --d(-1)-> 4
         this->want_scroll = true;
     }
     void SearchViewUi::accept()
