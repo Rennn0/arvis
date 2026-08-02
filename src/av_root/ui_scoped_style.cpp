@@ -4,7 +4,7 @@
 namespace avR
 {
 
-    UiScopedStyle::UiScopedStyle(const Style &style) : style_count(0)
+    UiScopedStyle::UiScopedStyle(const Style &style) : style_count(0), color_count(0)
     {
         auto push = [this](ImGuiStyleVar idx, const auto &opt)
         {
@@ -23,12 +23,50 @@ namespace avR
         push(ImGuiStyleVar_FrameBorderSize, style.frame_border);
     }
 
+    UiScopedStyle::UiScopedStyle() : style_count(0), color_count(0)
+    {
+    }
+
     UiScopedStyle::~UiScopedStyle()
     {
+        // separate stacks: colours and vars each pop their own count
+        if (this->color_count > 0)
+        {
+            ImGui::PopStyleColor(static_cast<int>(this->color_count));
+        }
+
         if (this->style_count > 0)
         {
-            ImGui::PopStyleVar(this->style_count);
+            ImGui::PopStyleVar(static_cast<int>(this->style_count));
         }
+    }
+
+    UiScopedStyle &UiScopedStyle::color(ImGuiCol idx, const ImVec4 &value)
+    {
+        ImGui::PushStyleColor(idx, value);
+        ++this->color_count;
+        return *this;
+    }
+
+    UiScopedStyle &UiScopedStyle::color(ImGuiCol idx, ImU32 value)
+    {
+        ImGui::PushStyleColor(idx, value);
+        ++this->color_count;
+        return *this;
+    }
+
+    UiScopedStyle &UiScopedStyle::var(ImGuiStyleVar idx, float value)
+    {
+        ImGui::PushStyleVar(idx, value);
+        ++this->style_count;
+        return *this;
+    }
+
+    UiScopedStyle &UiScopedStyle::var(ImGuiStyleVar idx, const ImVec2 &value)
+    {
+        ImGui::PushStyleVar(idx, value);
+        ++this->style_count;
+        return *this;
     }
 
 } // namespace avR

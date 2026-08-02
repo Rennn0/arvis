@@ -2,6 +2,7 @@
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/detailed_request_view_ui.hpp>
 #include <av_ui/search_view_ui.hpp>
+#include <av_ui/settings_view_ui.hpp>
 #include <av_root/av_inter_view_shared_state.hpp>
 #include "fonts/cousine_regular.h"
 #include "fonts/roboto_medium.h"
@@ -78,6 +79,7 @@ namespace avUi
         this->add_child(std::make_unique<avUi::RequstListViewUi>("req_list_view", shared));
         this->add_child(std::make_unique<avUi::DetailedRequestViewUi>("detailed_view", shared));
         this->add_child(std::make_unique<avUi::SearchViewUi>("search_view", shared));
+        this->add_child(std::make_unique<avUi::SettingsViewUi>("settings_view", shared));
 
         shared->shortcutManager.add(UiShortcut{"New request", "ctrl + n",
                                                [shared]()
@@ -132,6 +134,15 @@ namespace avUi
                                                           shared->on_show_style_editor.has_value();
                                                },
                                                [shared]() { shared->on_show_style_editor.value()(); }});
+
+        shared->shortcutManager.add(UiShortcut{"Show settings", "ctrl + shift + p",
+                                               [shared]()
+                                               {
+                                                   return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P,
+                                                                          ImGuiInputFlags_RouteGlobal) &&
+                                                          shared->on_show_settings.has_value();
+                                               },
+                                               [shared]() { shared->on_show_settings.value()(); }});
     }
 
     RootUi::~RootUi()

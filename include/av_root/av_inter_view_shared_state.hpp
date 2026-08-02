@@ -15,6 +15,7 @@ namespace avR
         bool show_req_list_view;
         bool show_req_detailed_view;
         bool show_search_view = false;
+        bool show_settings_view = false;
         bool is_init = false;
         AvRequest *display_request;
         avR::AvRequestListState* request_list_state;
@@ -29,6 +30,7 @@ namespace avR
         std::optional<std::function<void()>> on_show_shortcuts;
         std::optional<std::function<void()>> on_show_style_editor;
         std::optional<std::function<void()>> on_show_search;
+        std::optional<std::function<void()>> on_show_settings;
         //////////////////////////////////////////////////////////
     public:
         AvInterViewSharedState();

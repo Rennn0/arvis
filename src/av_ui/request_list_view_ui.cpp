@@ -222,6 +222,7 @@ namespace avUi
 
         if (ImGui::Button(envLabel))
         {
+            this->shared_state->on_show_settings.value()();
         }
         ImGui::SetItemTooltip("modify environment variables");
     }
