@@ -109,20 +109,22 @@ add_executable(arvis
     src/av_root/av_state.cpp
     src/av_root/ui_component.cpp
     src/av_root/ui_scoped_style.cpp
+    src/av_root/av_inter_view_shared_state.cpp
+    src/av_root/av_request_list_state.cpp
     src/av_ui/network_manager_ui.cpp
     src/av_ui/root_ui.cpp
     src/av_ui/request_list_view_ui.cpp
     src/av_ui/detailed_request_view_ui.cpp
     src/av_ui/json_tree_view.cpp
-    src/av_root/av_inter_view_shared_state.cpp
-    src/av_root/av_request_list_state.cpp
+    src/av_ui/search_view_ui.cpp
+    src/av_ui/ui_shortcut.cpp
+    src/av_ui/input_autocomplete_ui.cpp
     src/av_s/av_storage.cpp
     src/av_s/av_request_storage.cpp
     src/av_s/av_request_params_storage.cpp
     src/av_s/av_request_headers_storage.cpp
-    src/av_ui/ui_shortcut.cpp
     src/av_s/av_request_cookies_storage.cpp
-    src/av_ui/search_view_ui.cpp
+    src/av_s/av_environment_storage.cpp
 )
 
 target_include_directories(arvis PRIVATE

@@ -5,6 +5,7 @@
   "dependencies": [
     "curl",
     "nlohmann-json",
-    "boost-algorithm"
+    "boost-algorithm",
+    "boost-container"
   ]
 }

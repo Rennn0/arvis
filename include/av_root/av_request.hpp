@@ -28,6 +28,21 @@ namespace avR
     {
     };
 
+    struct AvEnvironmentVariable
+    {
+        int64_t id = 0;
+        int64_t EnvId = 0;
+        std::string key;
+        std::string value;
+    };
+    
+    struct AvEnvironment
+    {
+        int64_t id = 0;
+        std::string name;
+        std::vector<AvEnvironmentVariable> vars;
+    };
+
     /// @brief One user-created request entry (the app-side model the UI lists,
     ///        selects and displays; sending it is wired up later).
     struct AvRequest

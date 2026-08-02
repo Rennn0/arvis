@@ -8,7 +8,7 @@ namespace avR
     {
     public:
         std::vector<std::shared_ptr<AvRequest>> requests;
-        std::string environment;
+        std::shared_ptr<AvEnvironment> env;
 
     public:
         AvRequestListState();

@@ -1,9 +1,10 @@
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
+#include <av_s/av_environment_storage.hpp>
 #include <ranges>
 #include <algorithm>
 #include <chrono>
-// BUG ertianad shlis
+
 namespace avUi
 {
     bool try_swap(std::vector<std::shared_ptr<avR::AvRequest>> &vec, avR::AvRequest *r1, avR::AvRequest *r2)
@@ -30,6 +31,28 @@ namespace avUi
         }
     }
 
+    void load_test_env(avR::AvEnvironment *env)
+    {
+        avS::AvEnvironmentStorage es;
+        es.del(1);
+        std::vector<avR::AvEnvironment> envs = es.select_all();
+        if (envs.empty())
+        {
+            avR::AvEnvironment e =
+                avR::AvEnvironment{.name = "Dev",
+                                   .vars = std::vector<avR::AvEnvironmentVariable>{
+                                       avR::AvEnvironmentVariable{.key = "dev.api-key", .value = "test-api-key"},
+                                       avR::AvEnvironmentVariable{.key = "dev.host", .value = "localhost"},
+                                       avR::AvEnvironmentVariable{.key = "dev.username", .value = "test"}}};
+            es.upsert(e);
+            *env = e;
+        }
+        else
+        {
+            *env = envs.front();
+        }
+    }
+
     RequstListViewUi::RequstListViewUi(std::string id)
         : avR::UiComponent(std::move(id)), request_list_state(std::make_shared<avR::AvRequestListState>()),
           request_storage(std::make_unique<avS::AvRequestStorage>())
@@ -42,7 +65,10 @@ namespace avUi
         this->shared_state = static_cast<avR::AvInterViewSharedState *>(sharedState);
         this->shared_state->request_list_state = this->request_list_state.get();
         this->request_list_state->requests = this->request_storage->select_all();
-        this->request_list_state->environment = "Development"; // #TODO roca env sys aewyoba esec sheicvleba
+        this->request_list_state->env = std::make_shared<avR::AvEnvironment>();
+        // #NOTE test
+        load_test_env(this->request_list_state->env.get());
+        //
 
         if (this->request_list_state->requests.size() > 0)
         {
@@ -102,7 +128,7 @@ namespace avUi
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("env:");
         ImGui::SameLine();
-        const char *env = this->request_list_state->environment.c_str();
+        const char *env = this->request_list_state->env->name.c_str();
         ImGui::TextColored(this->environment_color, "%s", env);
 
         const char *addLabel = "+";

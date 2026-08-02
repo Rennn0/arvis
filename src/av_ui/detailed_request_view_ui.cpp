@@ -1,5 +1,6 @@
 #include <av_ui/detailed_request_view_ui.hpp>
 #include <av_ui/json_tree_view.hpp>
+#include <av_ui/input_autocomplete_ui.hpp>
 #include <string>
 #include <cstdlib>
 #if defined(_WIN32)
@@ -11,8 +12,18 @@ namespace avUi
     std::optional<int64_t> pendingParamDel;
     std::optional<int64_t> pendingHeaderDel;
     std::optional<int64_t> pendingCookieDel;
-    bool showStyles = false;
-    bool showShortcuts = false;
+    bool switchStyles = false;
+    bool switchShortcuts = false;
+
+    EnvVars envVars;
+    void load_env_vars(avR::AvEnvironment *env)
+    {
+        envVars = {};
+        for (const avR::AvEnvironmentVariable& var : env->vars)
+        {
+            envVars.emplace_back(avUi::Var{var.key, var.value});
+        }
+    }
 
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id)
         : avR::UiComponent(std::move(id)), footer_height(-1.f),
@@ -20,7 +31,8 @@ namespace avUi
           request_params_storage(std::make_unique<avS::AvRequestParamsStorage>()),
           request_headers_storage(std::make_unique<avS::AvRequestHeadersStorage>()),
           request_cookies_storage(std::make_unique<avS::AvRequestCookiesStorage>()),
-          json_view(std::make_unique<JsonTreeView>()), network_manager(this->request_storage->get_db_path())
+          network_manager(this->request_storage->get_db_path()),
+          json_view(std::make_unique<JsonTreeView>())
     {
         this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove |
                              ImGuiWindowFlags_NoResize;
@@ -40,11 +52,13 @@ namespace avUi
 
         this->shared_state->on_send_request.emplace([this]() { this->send_request(); });
         this->shared_state->on_save_changes.emplace([this]() { this->save_changes(); });
-        this->shared_state->on_show_shortcuts.emplace([this]() { showShortcuts = true; });
-        this->shared_state->on_show_style_editor.emplace([this]() { showStyles = true; });
+        this->shared_state->on_show_shortcuts.emplace([this]() { switchShortcuts = !switchShortcuts; });
+        this->shared_state->on_show_style_editor.emplace([this]() { switchStyles = !switchStyles; });
 
         if (!this->shared_state->is_init)
             this->shared_state->on_display_request_change.value()();
+
+        load_env_vars(this->shared_state->request_list_state->env.get());
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -138,16 +152,16 @@ namespace avUi
 
         ImGui::End();
 
-        if (showStyles)
+        if (switchStyles)
         {
-            if (ImGui::Begin("style editor", &showStyles))
+            if (ImGui::Begin("style editor", &switchStyles))
             {
                 ImGui::ShowStyleEditor();
             }
 
             if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
             {
-                showStyles = false;
+                switchStyles = false;
             }
             ImGui::End();
         }
@@ -522,13 +536,13 @@ namespace avUi
         {
             if (!header.included || header.key.empty())
                 continue;
-            request.headers.emplace_back(header.key, header.value);
+            request.headers.emplace_back(header.key, avUi::resolve_vars(header.value, envVars));
         }
         for (const avR::AvRequestCookie &cookie : req->cookies)
         {
             if (!cookie.included || cookie.key.empty())
                 continue;
-            request.cookies.emplace_back(cookie.key, cookie.value);
+            request.cookies.emplace_back(cookie.key, avUi::resolve_vars(cookie.value, envVars));
         }
 
         // keep an independent copy of exactly what we send so the footer can reproduce it
@@ -629,7 +643,7 @@ namespace avUi
 
             url += url_encode(p.key);
             url.push_back('=');
-            url += url_encode(p.value);
+            url += url_encode(avUi::resolve_vars(p.value, envVars));
         }
 
         url.append(fragment);
@@ -666,7 +680,8 @@ namespace avUi
                         this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    ImGui::InputText("##val", &item->value);
+                    avUi::InputTextAutocomplete("##v", &item->value, envVars);
+                    // ImGui::InputText("##val", &item->value);
                     if (ImGui::IsItemDeactivatedAfterEdit())
                         this->shared_state->display_request->pending_save = true;
 
@@ -770,9 +785,11 @@ namespace avUi
                     ImGui::InputText("##k", &header->key);
                     if (ImGui::IsItemDeactivatedAfterEdit())
                         this->shared_state->display_request->pending_save = true;
+
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    ImGui::InputText("##v", &header->value);
+                    avUi::InputTextAutocomplete("##v", &header->value, envVars);
+                    // ImGui::InputText("##v", &header->value);
                     if (ImGui::IsItemDeactivatedAfterEdit())
                         this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
@@ -845,7 +862,8 @@ namespace avUi
                         this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
                     ImGui::SetNextItemWidth(-FLT_MIN);
-                    ImGui::InputText("##v", &cookie->value);
+                    avUi::InputTextAutocomplete("##v", &cookie->value, envVars);
+                    // ImGui::InputText("##v", &cookie->value);
                     if (ImGui::IsItemDeactivatedAfterEdit())
                         this->shared_state->display_request->pending_save = true;
                     ImGui::TableNextColumn();
@@ -880,12 +898,13 @@ namespace avUi
     }
     void DetailedRequestViewUi::render_shortcuts() const
     {
-        if (!showShortcuts)
+        if (!switchShortcuts)
             return;
 
         ImGui::OpenPopup("shortcuts");
 
-        if (ImGui::BeginPopupModal("shortcuts", &showShortcuts, ImGuiWindowFlags_AlwaysAutoResize))
+        if (ImGui::BeginPopupModal("shortcuts", &switchShortcuts,
+                                   ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration))
         {
             ImGui::BeginTable("table_shortcuts", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg);
             ImGui::TableSetupColumn("action", ImGuiTableColumnFlags_WidthStretch);
@@ -895,17 +914,17 @@ namespace avUi
             {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text(s.display.c_str());
+                ImGui::Text("%s", s.display.c_str());
                 ImGui::TableSetColumnIndex(1);
                 ImGui::SameLine();
-                ImGui::Text(s.binding.c_str());
+                ImGui::Text("%s", s.binding.c_str());
             }
 
             ImGui::EndTable();
             if (ImGui::IsKeyPressed(ImGuiKey_Escape))
             {
                 ImGui::CloseCurrentPopup();
-                showShortcuts = false;
+                switchShortcuts = false;
             }
 
             ImGui::Spacing();
