@@ -127,6 +127,7 @@ add_executable(arvis
     src/av_s/av_request_headers_storage.cpp
     src/av_s/av_request_cookies_storage.cpp
     src/av_s/av_environment_storage.cpp
+    src/av_root/ui_scoped_id.cpp
 )
 
 target_include_directories(arvis PRIVATE

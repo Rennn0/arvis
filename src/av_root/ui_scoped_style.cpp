@@ -3,7 +3,6 @@
 
 namespace avR
 {
-
     UiScopedStyle::UiScopedStyle(const Style &style) : style_count(0), color_count(0)
     {
         auto push = [this](ImGuiStyleVar idx, const auto &opt)

@@ -6,6 +6,7 @@
 #include <av_root/av_request.hpp>
 #include <av_ui/ui_shortcut.hpp>
 #include <av_root/av_request_list_state.hpp>
+#include <av_root/av_app_settings.hpp>
 
 namespace avR
 {
@@ -18,7 +19,8 @@ namespace avR
         bool show_settings_view = false;
         bool is_init = false;
         AvRequest *display_request;
-        avR::AvRequestListState* request_list_state;
+        avR::AvRequestListState *request_list_state;
+        std::shared_ptr<avR::AvAppSettings> app_settings;
         std::optional<std::function<void()>> on_display_request_change;
 
         // key binding actions //////////////////////////////////
