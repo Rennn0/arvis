@@ -43,6 +43,8 @@ namespace avUi
         this->shared_state->on_display_request_change.emplace(
             [this]()
             {
+                return;
+
                 int64_t id = this->shared_state->display_request->id;
                 this->shared_state->display_request->params = this->request_params_storage->select_by_req_id(id);
                 this->shared_state->display_request->headers = this->request_headers_storage->select_by_req_id(id);
@@ -585,6 +587,9 @@ namespace avUi
 
     void DetailedRequestViewUi::save_changes()
     {
+        if (!this->shared_state->display_request)
+            return;
+
         this->request_storage->upsert(this->shared_state->display_request);
         this->request_params_storage->upsert(this->shared_state->display_request->params);
         this->request_headers_storage->upsert(this->shared_state->display_request->headers);

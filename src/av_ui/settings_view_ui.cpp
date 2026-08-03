@@ -181,7 +181,7 @@ namespace avUi
             this->environments.erase(this->environments.begin() + static_cast<long>(erase_env));
 
         Spacing();
-        TextDisabled("reference variables anywhere with {{name}} - params, headers and cookies");
+        TextDisabled("reference variables with {{name}} - params, headers and cookies");
     }
     void SettingsViewUi::render_shortcuts()
     {
@@ -233,6 +233,8 @@ namespace avUi
             if (Button("y"))
             {
                 this->env_storage->del(env.id);
+                if (active)
+                    this->set_active_env(avR::AvEnvironment{});
                 erase_env = index;
                 this->env_pending_del = 0;
             }
@@ -336,7 +338,8 @@ namespace avUi
             return;
 
         *s->env = env;
-        this->shared_state->on_env_change.value()();
+        if (this->shared_state->on_env_change.has_value())
+            this->shared_state->on_env_change.value()();
     }
     bool SettingsViewUi::is_active_env(const avR::AvEnvironment &env) const
     {

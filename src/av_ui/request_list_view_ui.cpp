@@ -36,21 +36,10 @@ namespace avUi
     {
         avS::AvEnvironmentStorage es;
         std::vector<avR::AvEnvironment> envs = es.select_all();
-        // if (envs.empty())
-        // {
-        //     avR::AvEnvironment e =
-        //         avR::AvEnvironment{.name = "Dev",
-        //                            .vars = std::vector<avR::AvEnvironmentVariable>{
-        //                                avR::AvEnvironmentVariable{.key = "dev.api-key", .value = "test-api-key"},
-        //                                avR::AvEnvironmentVariable{.key = "dev.host", .value = "localhost"},
-        //                                avR::AvEnvironmentVariable{.key = "dev.username", .value = "test"}}};
-        //     es.upsert(e);
-        //     *env = e;
-        // }
-        // else
-        // {
-        // }
-        *env = envs.front();
+        if (envs.empty())
+            return;
+
+        *env = std::move(envs.front());
     }
 
     RequstListViewUi::RequstListViewUi(std::string id)
@@ -126,8 +115,11 @@ namespace avUi
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("env:");
         ImGui::SameLine();
-        const char *env = this->request_list_state->env->name.c_str();
-        ImGui::TextColored(this->environment_color, "%s", env);
+        const std::string &envName = this->request_list_state->env->name;
+        if (envName.empty())
+            ImGui::TextDisabled("none");
+        else
+            ImGui::TextColored(this->environment_color, "%s", envName.c_str());
 
         const char *addLabel = "+";
         const float addLabelButtonWidth = ImGui::CalcTextSize(addLabel).x + style.FramePadding.x * 3.f;
@@ -264,7 +256,8 @@ namespace avUi
         if (ImGui::Selectable("##row", is_selected, ImGuiSelectableFlags_None, ImVec2(0.0f, row_height)))
         {
             this->shared_state->display_request = request;
-            this->shared_state->on_display_request_change.value()();
+            if (this->shared_state->on_display_request_change.has_value())
+                this->shared_state->on_display_request_change.value()();
         }
 
         if (ImGui::BeginDragDropSource())
