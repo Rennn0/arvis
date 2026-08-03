@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  A cross-platform (Windows / Linux / macOS) C++20 desktop HTTP client and request inspector with a native GUI.
+  A cross-platform (Windows / Linux / macOS) C++20 feature rich desktop HTTP client and request inspector with a native GUI.
 </p>
 <p align="center">
-  Focused on <b>developer experience</b>, shortcuts, quick navigation and simplicity.
+  Focuses on <b>developer experience</b>, shortcuts, quick navigation and simplicity.
 </p>
 
 <p align="center">
