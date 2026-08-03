@@ -1,4 +1,5 @@
 #include <av_ui/request_list_view_ui.hpp>
+#include <av_ui/settings_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
 #include <av_s/av_environment_storage.hpp>
 #include <ranges>
@@ -31,26 +32,25 @@ namespace avUi
         }
     }
 
-    void load_test_env(avR::AvEnvironment *env)
+    void load_env(avR::AvEnvironment *env)
     {
         avS::AvEnvironmentStorage es;
-        es.del(1);
         std::vector<avR::AvEnvironment> envs = es.select_all();
-        if (envs.empty())
-        {
-            avR::AvEnvironment e =
-                avR::AvEnvironment{.name = "Dev",
-                                   .vars = std::vector<avR::AvEnvironmentVariable>{
-                                       avR::AvEnvironmentVariable{.key = "dev.api-key", .value = "test-api-key"},
-                                       avR::AvEnvironmentVariable{.key = "dev.host", .value = "localhost"},
-                                       avR::AvEnvironmentVariable{.key = "dev.username", .value = "test"}}};
-            es.upsert(e);
-            *env = e;
-        }
-        else
-        {
-            *env = envs.front();
-        }
+        // if (envs.empty())
+        // {
+        //     avR::AvEnvironment e =
+        //         avR::AvEnvironment{.name = "Dev",
+        //                            .vars = std::vector<avR::AvEnvironmentVariable>{
+        //                                avR::AvEnvironmentVariable{.key = "dev.api-key", .value = "test-api-key"},
+        //                                avR::AvEnvironmentVariable{.key = "dev.host", .value = "localhost"},
+        //                                avR::AvEnvironmentVariable{.key = "dev.username", .value = "test"}}};
+        //     es.upsert(e);
+        //     *env = e;
+        // }
+        // else
+        // {
+        // }
+        *env = envs.front();
     }
 
     RequstListViewUi::RequstListViewUi(std::string id)
@@ -66,9 +66,7 @@ namespace avUi
         this->shared_state->request_list_state = this->request_list_state.get();
         this->request_list_state->requests = this->request_storage->select_all();
         this->request_list_state->env = std::make_shared<avR::AvEnvironment>();
-        // #NOTE test
-        load_test_env(this->request_list_state->env.get());
-        //
+        load_env(this->request_list_state->env.get());
 
         if (this->request_list_state->requests.size() > 0)
         {
@@ -222,7 +220,7 @@ namespace avUi
 
         if (ImGui::Button(envLabel))
         {
-            this->shared_state->on_show_settings.value()();
+            this->shared_state->on_show_settings.value()(static_cast<size_t>(avUi::Section::Environment));
         }
         ImGui::SetItemTooltip("modify environment variables");
     }

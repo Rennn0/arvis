@@ -6,6 +6,16 @@
 
 namespace avUi
 {
+    enum class Section
+    {
+        General = 0,
+        Environment,
+        Shortcuts,
+        Appearance,
+        Network,
+        Count
+    };
+
     class SettingsViewUi : public avR::UiComponent
     {
     public:
@@ -18,16 +28,7 @@ namespace avUi
         avR::AvInterViewSharedState *shared_state;
         std::vector<avR::AvEnvironment> environments;
         bool envs_loaded = false;
-        int64_t env_pending_del;
-        enum class Section
-        {
-            General = 0,
-            Environment,
-            Shortcuts,
-            Appearance,
-            Network,
-            Count
-        };
+        int64_t env_pending_del = 0;
 
         static const char *const section_labels[static_cast<int>(Section::Count)];
 

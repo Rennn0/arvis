@@ -22,6 +22,7 @@ namespace avR
         avR::AvRequestListState *request_list_state;
         std::shared_ptr<avR::AvAppSettings> app_settings;
         std::optional<std::function<void()>> on_display_request_change;
+        std::optional<std::function<void()>> on_env_change;
 
         // key binding actions //////////////////////////////////
         avUi::UiShortcut shortcutManager;
@@ -32,7 +33,7 @@ namespace avR
         std::optional<std::function<void()>> on_show_shortcuts;
         std::optional<std::function<void()>> on_show_style_editor;
         std::optional<std::function<void()>> on_show_search;
-        std::optional<std::function<void()>> on_show_settings;
+        std::optional<std::function<void(size_t)>> on_show_settings;
         //////////////////////////////////////////////////////////
     public:
         AvInterViewSharedState();

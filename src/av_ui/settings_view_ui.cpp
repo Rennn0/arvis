@@ -8,6 +8,7 @@ namespace avUi
     constexpr float kVarIndent = 12.f;
     constexpr float kWindowW = 840.f;
     constexpr float kWindowH = 560.f;
+    constexpr size_t kNoIndex = static_cast<size_t>(-1); // "nothing to erase" sentinel
 
     const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f); // #15171b
     const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);   // #52565e
@@ -23,8 +24,12 @@ namespace avUi
           shared_state(static_cast<avR::AvInterViewSharedState *>(sharedState)),
           selected_section(static_cast<int>(Section::General))
     {
-        this->shared_state->on_show_settings.emplace([s = this->shared_state]()
-                                                     { s->show_settings_view = !s->show_settings_view; });
+        this->shared_state->on_show_settings.emplace(
+            [s = this->shared_state, selected = &this->selected_section](size_t section)
+            {
+                s->show_settings_view = !s->show_settings_view;
+                *selected = section;
+            });
         this->shared_state->app_settings = this->app_settings;
     }
 
@@ -35,9 +40,12 @@ namespace avUi
     void SettingsViewUi::render()
     {
         if (!this->shared_state->show_settings_view)
+        {
+            this->envs_loaded = false;
             return;
+        }
         using namespace ImGui;
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
         SetNextWindowPos(GetMainViewport()->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(.5, .5));
         SetNextWindowSize(ImVec2(kWindowW, kWindowH), ImGuiCond_FirstUseEver);
         SetNextWindowBgAlpha(1.f);
@@ -148,13 +156,14 @@ namespace avUi
         {
             avR::AvEnvironment newEnv;
             newEnv.name = "new env";
+            if (this->environments.size() > 0)
+                for (const avR::AvEnvironmentVariable &preV : this->environments.front().vars)
+                    newEnv.vars.emplace_back(avR::AvEnvironmentVariable{.key = preV.key});
             this->env_storage->upsert(newEnv);
             this->environments.push_back(std::move(newEnv));
         }
 
         SameLine();
-        if (Button("refresh"))
-            this->reload_environments();
         Spacing();
         if (this->environments.empty())
         {
@@ -162,14 +171,14 @@ namespace avUi
             return;
         }
 
-        size_t erase_env = -1;
+        size_t erase_env = kNoIndex;
         for (size_t i = 0; i < this->environments.size(); i++)
         {
             this->render_env_block(this->environments[i], i, erase_env);
         }
 
-        if (erase_env != -1)
-            this->environments.erase(this->environments.begin() + erase_env);
+        if (erase_env != kNoIndex)
+            this->environments.erase(this->environments.begin() + static_cast<long>(erase_env));
 
         Spacing();
         TextDisabled("reference variables anywhere with {{name}} - params, headers and cookies");
@@ -187,7 +196,7 @@ namespace avUi
     {
         using namespace ImGui;
 
-        avR::UiScopedId sid(this);
+        avR::UiScopedId sid(static_cast<int>(index));
         if (index > 0)
         {
             Spacing();
@@ -241,66 +250,78 @@ namespace avUi
         SetItemTooltip("delete env");
 
         Indent(kVarIndent);
-        size_t eraseVar = -1;
+        size_t eraseVar = kNoIndex;
         if (!env.vars.empty())
         {
-            const ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH;
+            const ImGuiTableFlags flags = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable;
 
             if (BeginTable("##vars", 3, flags))
             {
-                TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch, 1.f);
-                TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch, 1.6f);
-                TableSetupColumn("##del", ImGuiTableColumnFlags_WidthFixed, 26.f);
+                TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch, .3f);
+                TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch, .7f);
+                TableSetupColumn("##del", ImGuiTableColumnFlags_WidthFixed);
 
                 for (size_t v = 0; v < env.vars.size(); ++v)
                 {
                     avR::AvEnvironmentVariable &var = env.vars[v];
 
-                    avR::UiScopedId varId(this);
-                    TableNextRow();
-                    TableSetColumnIndex(0);
-                    SetNextItemWidth(-FLT_MIN);
-                    InputTextWithHint("##key", "name", &var.key);
-                    const bool keyCommited = IsItemDeactivatedAfterEdit();
-
-                    TableSetColumnIndex(1);
-                    SetNextItemWidth(-FLT_MIN);
-                    InputTextWithHint("##val", "value", &var.value);
-                    const bool valCommited = IsItemDeactivatedAfterEdit();
-
-                    if (keyCommited || valCommited)
+                    avR::UiScopedId varId(static_cast<int>(v));
                     {
-                        var.EnvId = env.id;
-                        this->env_storage->upsert_var(var);
-                        if (this->is_active_env(env))
-                            this->set_active_env(env);
+                        avR::UiScopedStyle::Style s;
+                        s.frame_border = 0;
+                        s.frame_rounding = 0;
+                        avR::UiScopedStyle ss(s);
+                        TableNextRow();
+                        TableSetColumnIndex(0);
+                        SetNextItemWidth(-FLT_MIN);
+                        InputTextWithHint("##key", "name", &var.key);
+                        const bool keyCommited = IsItemDeactivatedAfterEdit();
+
+                        TableSetColumnIndex(1);
+                        SetNextItemWidth(-FLT_MIN);
+                        InputTextWithHint("##val", "value", &var.value);
+                        const bool valCommited = IsItemDeactivatedAfterEdit();
+
+                        if (keyCommited || valCommited)
+                        {
+                            var.EnvId = env.id;
+                            this->env_storage->upsert_var(var);
+                            if (this->is_active_env(env))
+                                this->set_active_env(env);
+                        }
                     }
 
                     TableSetColumnIndex(2);
-                    if (SmallButton("x"))
+                    if (Button("x"))
                         eraseVar = v;
+                    SameLine();
+                    Spacing();
                 }
                 EndTable();
             }
-
-            if (eraseVar != -1)
-            {
-                this->env_storage->del_var(env.vars[eraseVar].id);
-                env.vars.erase(env.vars.begin() + eraseVar);
-                if (this->is_active_env(env))
-                    this->set_active_env(env);
-            }
-
-            if (SmallButton("+ variable"))
-            {
-                avR::AvEnvironmentVariable newVar;
-                newVar.EnvId = env.id;
-                this->env_storage->upsert_var(newVar);
-                env.vars.push_back(std::move(newVar));
-            }
-
-            Unindent(kVarIndent);
         }
+        else
+        {
+            TextDisabled("no variables");
+        }
+
+        if (eraseVar != kNoIndex)
+        {
+            this->env_storage->del_var(env.vars[eraseVar].id);
+            env.vars.erase(env.vars.begin() + static_cast<long>(eraseVar));
+            if (this->is_active_env(env))
+                this->set_active_env(env);
+        }
+
+        if (Button("+"))
+        {
+            avR::AvEnvironmentVariable newVar;
+            newVar.EnvId = env.id;
+            this->env_storage->upsert_var(newVar);
+            env.vars.push_back(std::move(newVar));
+        }
+
+        Unindent(kVarIndent);
     }
     void SettingsViewUi::reload_environments()
     {
@@ -310,10 +331,12 @@ namespace avUi
     }
     void SettingsViewUi::set_active_env(const avR::AvEnvironment &env)
     {
-        const avR::AvRequestListState *s = this->shared_state->request_list_state;
+        avR::AvRequestListState *s = this->shared_state->request_list_state;
         if (!s || !s->env)
             return;
+
         *s->env = env;
+        this->shared_state->on_env_change.value()();
     }
     bool SettingsViewUi::is_active_env(const avR::AvEnvironment &env) const
     {

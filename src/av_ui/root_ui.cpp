@@ -135,14 +135,14 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_show_style_editor.value()(); }});
 
-        shared->shortcutManager.add(UiShortcut{"Show settings", "ctrl + shift + p",
-                                               [shared]()
-                                               {
-                                                   return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P,
-                                                                          ImGuiInputFlags_RouteGlobal) &&
-                                                          shared->on_show_settings.has_value();
-                                               },
-                                               [shared]() { shared->on_show_settings.value()(); }});
+        shared->shortcutManager.add(UiShortcut{
+            "Show settings", "ctrl + shift + p",
+            [shared]()
+            {
+                return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P, ImGuiInputFlags_RouteGlobal) &&
+                       shared->on_show_settings.has_value();
+            },
+            [shared]() { shared->on_show_settings.value()(static_cast<size_t>(avUi::Section::General)); }});
     }
 
     RootUi::~RootUi()

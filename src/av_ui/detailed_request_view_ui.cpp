@@ -19,7 +19,7 @@ namespace avUi
     void load_env_vars(avR::AvEnvironment *env)
     {
         envVars = {};
-        for (const avR::AvEnvironmentVariable& var : env->vars)
+        for (const avR::AvEnvironmentVariable &var : env->vars)
         {
             envVars.emplace_back(avUi::Var{var.key, var.value});
         }
@@ -31,8 +31,7 @@ namespace avUi
           request_params_storage(std::make_unique<avS::AvRequestParamsStorage>()),
           request_headers_storage(std::make_unique<avS::AvRequestHeadersStorage>()),
           request_cookies_storage(std::make_unique<avS::AvRequestCookiesStorage>()),
-          network_manager(this->request_storage->get_db_path()),
-          json_view(std::make_unique<JsonTreeView>())
+          network_manager(this->request_storage->get_db_path()), json_view(std::make_unique<JsonTreeView>())
     {
         this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove |
                              ImGuiWindowFlags_NoResize;
@@ -54,7 +53,8 @@ namespace avUi
         this->shared_state->on_save_changes.emplace([this]() { this->save_changes(); });
         this->shared_state->on_show_shortcuts.emplace([this]() { switchShortcuts = !switchShortcuts; });
         this->shared_state->on_show_style_editor.emplace([this]() { switchStyles = !switchStyles; });
-
+        this->shared_state->on_env_change.emplace(
+            [this]() { load_env_vars(this->shared_state->request_list_state->env.get()); });
         if (!this->shared_state->is_init)
             this->shared_state->on_display_request_change.value()();
 
