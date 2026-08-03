@@ -43,7 +43,8 @@ namespace avUi
         this->shared_state->on_display_request_change.emplace(
             [this]()
             {
-                return;
+                if (!this->shared_state->display_request)
+                    return;
 
                 int64_t id = this->shared_state->display_request->id;
                 this->shared_state->display_request->params = this->request_params_storage->select_by_req_id(id);

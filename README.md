@@ -119,6 +119,7 @@ cmake --build --preset windows-debug    # or: windows-release
  - response info (x)
  - reopen last modified req (x)
  - finder shortcut/window for requests (x)
+ - req history tree
  - environment system (inlines defined variable properties into requests)
  - - settings window {env}
  - - settings window {general}
