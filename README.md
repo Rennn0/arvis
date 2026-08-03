@@ -24,6 +24,42 @@
 
 ---
 
+## Small on purpose
+
+arvis is a native binary — no Chromium, no Node runtime, no per-tab renderer
+process. A real ~10-minute working session (open the app, edit requests, send,
+browse JSON responses) holds **~105 MB of RAM in a single process**, inside a
+1.6 MB band with no sawtooth and no creep, while burning **0.3 – 0.6 % CPU** —
+and it drops to **0 % when idle**. The release binary is
+**~13 MB** with no runtime to install beside it; the Windows build is statically
+linked and doesn't even need the VC++ redistributable.
+
+Postman and Insomnia are Electron apps: each one starts a full browser engine, a
+Node runtime and a handful of helper processes before it draws a single request
+row. That typically means several hundred MB to 1 GB+ of RAM across those
+processes, a ~100–150 MB+ installer, seconds of cold start, and an account
+prompt with cloud-synced workspaces. arvis is one process, one ~13 MB binary,
+one local SQLite file and no login — nothing leaves your machine. It's the kind
+of tool you keep open all day next to a compiler, a browser, a database GUI and
+a few containers, without it being the reason you run out of RAM.
+
+> Those Postman/Insomnia figures are the usual ballpark rather than a controlled
+> benchmark — measure them yourself against the numbers above and the gap will
+> still be an order of magnitude.
+
+### Screenshots
+
+Want a look before installing? The images live in [`assets/`](assets):
+
+| | |
+|---|---|
+| **The workspace** — request editor, `{{variable}}` autocomplete, response footer and the collapsible JSON tree viewer | [`assets/arv_workspace.png`](assets/arv_workspace.png) |
+| **`Ctrl+F` search palette** — fuzzy search over the whole collection with `:t` `:m` `:u` `:c` `:s` `:b` field prefixes | [`assets/arv_search.png`](assets/arv_search.png) |
+| **`Ctrl+Shift+P` settings** — environments and `{{name}}` variable substitution | [`assets/arv_settings.png`](assets/arv_settings.png) |
+| **Resource usage** — CPU and RAM sampled over a 10-minute session | [`assets/metrics.png`](assets/metrics.png) |
+
+---
+
 ## Quick install
 
 Each installer downloads the latest [prebuilt release binary](https://github.com/Rennn0/arvis/releases) for your platform (Linux x64, Windows x64, macOS arm64/x64) and installs it to `~/.local/bin` — no compiler or dependencies required. If no prebuilt binary matches, it falls back to building from source.
