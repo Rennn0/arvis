@@ -424,9 +424,9 @@ namespace avUi
             mode_tab("Tree", ResponseView::tree);
             ImGui::SameLine();
             mode_tab("Pretty", ResponseView::pretty);
-            ImGui::SameLine();
-            mode_tab("Raw", ResponseView::raw);
         }
+        ImGui::SameLine();
+        mode_tab("Raw", ResponseView::raw);
         ImGui::SameLine();
         mode_tab("Response Headers", ResponseView::res_headers, rp->last_result.response_headers.size());
         ImGui::SameLine();
@@ -491,20 +491,6 @@ namespace avUi
                 }
                 ImGui::EndTable();
             }
-        }
-        else
-        {
-            // read-only body view fills the remaining footer space. It wraps at the child's right
-            // edge (no horizontal scroll) and only scrolls vertically on overflow.
-            if (ImGui::BeginChild("##response_body_view", ImVec2(0, 0)))
-            {
-                ImGui::PushTextWrapPos(0.f); // 0 == wrap at the child's right edge
-                ImGui::TextUnformatted(this->shared_state->display_request->last_result.body.data(),
-                                       this->shared_state->display_request->last_result.body.data() +
-                                           this->shared_state->display_request->last_result.body.size());
-                ImGui::PopTextWrapPos();
-            }
-            ImGui::EndChild();
         }
     }
 
