@@ -47,7 +47,7 @@ a few containers, without it being the reason you run out of RAM.
 > benchmark — measure them yourself against the numbers above and the gap will
 > still be an order of magnitude.
 
-### Screenshots
+### Gallery
 
 Want a look before installing? The images live in [`assets/`](assets):
 
