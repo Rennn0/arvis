@@ -110,6 +110,7 @@ namespace avUi
             //     continue;
             // lastFrame = now;
 
+            // #NOTE it goes idle imediately when no input event
             glfwWaitEvents();
 
             ImGui_ImplOpenGL3_NewFrame();
