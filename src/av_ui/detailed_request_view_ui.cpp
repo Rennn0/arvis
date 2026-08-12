@@ -213,8 +213,13 @@ namespace avUi
 
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.f);
-        if (ImGui::InputText("##title_edit", &req.url,
-                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+        // if (ImGui::InputText("##title_edit", &req.url,
+        //                      ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+        // {
+        //     this->save_state_change();
+        // };
+        if (avUi::InputTextAutocomplete("##title_edit", &req.url, envVars,
+                                        ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
         {
             this->save_state_change();
         };
@@ -519,7 +524,7 @@ namespace avUi
         // is in flight.
         avNet::http_request request;
         request.method = req->method;
-        request.url = std::move(url);
+        request.url = avUi::resolve_vars(url, envVars);
         request.body = req->body;
         for (const avR::AvRequestHeader &header : req->headers)
         {

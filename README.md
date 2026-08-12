@@ -157,6 +157,9 @@ cmake --build --preset windows-debug    # or: windows-release
  - finder shortcut/window for requests (x)
  - req history tree
  - response jwon view (better)
+ - - found matching only shows leaf -> need whole node
+ - - collapse / fold needs to work recursively 
+ - - maybe preview map on right edge instead of scrollbar?
  - environment system (inlines defined variable properties into requests)
  - - settings window {env} (x)
  - - settings window {general}
@@ -165,4 +168,4 @@ cmake --build --preset windows-debug    # or: windows-release
  - schemas for requests
 
 ## Bugs
-- 
+- RAW option not working in viewer
