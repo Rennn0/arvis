@@ -433,9 +433,11 @@ namespace avUi
         ImGui::SameLine();
         mode_tab("Raw", ResponseView::raw);
         ImGui::SameLine();
-        mode_tab("Response Headers", ResponseView::res_headers, rp->last_result.response_headers.size());
+        mode_tab("Response Headers", ResponseView::res_headers,
+                 static_cast<unsigned short>(rp->last_result.response_headers.size()));
         ImGui::SameLine();
-        mode_tab("Response Cookies", ResponseView::res_cookies, rp->last_result.response_cookies.size());
+        mode_tab("Response Cookies", ResponseView::res_cookies,
+                 static_cast<unsigned short>(rp->last_result.response_cookies.size()));
 
         if (json && this->response_view == ResponseView::tree)
         {
