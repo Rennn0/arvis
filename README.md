@@ -56,7 +56,6 @@ Want a look before installing? The images live in [`assets/`](assets):
 | **The workspace** — request editor, `{{variable}}` autocomplete, response footer and the collapsible JSON tree viewer | [`assets/arv_workspace.png`](assets/arv_workspace.png) |
 | **`Ctrl+F` search palette** — fuzzy search over the whole collection with `:t` `:m` `:u` `:c` `:s` `:b` field prefixes | [`assets/arv_search.png`](assets/arv_search.png) |
 | **`Ctrl+Shift+P` settings** — environments and `{{name}}` variable substitution | [`assets/arv_settings.png`](assets/arv_settings.png) |
-| **Resource usage** — CPU and RAM sampled over a 10-minute session | [`assets/metrics.png`](assets/metrics.png) |
 
 ---
 
