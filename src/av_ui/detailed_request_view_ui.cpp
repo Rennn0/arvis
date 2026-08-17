@@ -50,6 +50,9 @@ namespace avUi
                 this->shared_state->display_request->params = this->request_params_storage->select_by_req_id(id);
                 this->shared_state->display_request->headers = this->request_headers_storage->select_by_req_id(id);
                 this->shared_state->display_request->cookies = this->request_cookies_storage->select_by_req_id(id);
+
+                this->json_view->set_source(this->shared_state->display_request->last_result.body);
+                this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
             });
 
         this->shared_state->on_send_request.emplace([this]() { this->send_request(); });
@@ -337,6 +340,32 @@ namespace avUi
         return out;
     }
 
+    static void render_kv_table(const char *id, const std::vector<std::pair<std::string, std::string>> &rows)
+    {
+        using namespace ImGui;
+        avR::UiScopedStyle scoped(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
+        const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
+                                      ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_ScrollY;
+        if (!BeginTable(id, 2, flags, ImVec2(0, 0), 0.))
+            return;
+        TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
+        TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
+        TableSetupScrollFreeze(0, 1);
+        TableHeadersRow();
+        for (const auto &pair : rows)
+        {
+            PushID(&pair);
+            TableNextRow();
+            TableNextColumn();
+            AlignTextToFramePadding();
+            TextUnformatted(pair.first.c_str());
+            TableNextColumn();
+            TextWrapped("%s", pair.second.c_str());
+            PopID();
+        }
+        EndTable();
+    }
+
     void DetailedRequestViewUi::render_footer(const ImGuiStyle &style)
     {
         if (this->pending_response_v2.valid())
@@ -438,8 +467,15 @@ namespace avUi
         ImGui::SameLine();
         mode_tab("Response Cookies", ResponseView::res_cookies,
                  static_cast<unsigned short>(rp->last_result.response_cookies.size()));
-
-        if (json && this->response_view == ResponseView::tree)
+        if (this->response_view == ResponseView::res_headers)
+        {
+            render_kv_table("res_headers", rp->last_result.response_headers);
+        }
+        else if (this->response_view == ResponseView::res_cookies)
+        {
+            render_kv_table("res_cookies", rp->last_result.response_cookies);
+        }
+        else if (json && this->response_view == ResponseView::tree)
         {
             this->json_view->render_tree();
         }
@@ -447,57 +483,10 @@ namespace avUi
         {
             this->json_view->render_pretty();
         }
-        else if (this->response_view == ResponseView::res_cookies) // TODO rewrite this
+        else
         {
-            ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
-                                    ImGuiTableFlags_SizingStretchSame;
-            if (ImGui::BeginTable("res_cokies", 2, flags, ImVec2(0, 0), 0.f))
-            {
-                ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableHeadersRow();
-
-                const auto &cookies = this->shared_state->display_request->last_result.response_cookies;
-                for (const auto &pair : cookies)
-                {
-                    ImGui::PushID(&pair);
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted(pair.first.c_str());
-                    ImGui::TableNextColumn();
-                    ImGui::TextWrapped("%s", pair.second.c_str());
-                    ImGui::PopID();
-                }
-                ImGui::EndTable();
-            }
-        }
-        else if (this->response_view == ResponseView::res_headers)
-        {
-            avR::UiScopedStyle style(avR::UiScopedStyle::Style{.frame_rounding = 0, .frame_border = 0});
-
-            ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
-                                    ImGuiTableFlags_SizingStretchSame;
-            if (ImGui::BeginTable("res_headers", 2, flags, ImVec2(0, 0), 0.f))
-            {
-                ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableHeadersRow();
-
-                const auto &headers = this->shared_state->display_request->last_result.response_headers;
-                for (const auto &pair : headers)
-                {
-                    ImGui::PushID(&pair);
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted(pair.first.c_str());
-                    ImGui::TableNextColumn();
-                    ImGui::TextWrapped("%s", pair.second.c_str());
-                    ImGui::PopID();
-                }
-                ImGui::EndTable();
-            }
+            ImGui::InputTextMultiline("##raw", &const_cast<avR::AvRequest *>(rp)->last_result.body,
+                                      ImGui::GetContentRegionAvail(), ImGuiInputTextFlags_ReadOnly);
         }
     }
 
