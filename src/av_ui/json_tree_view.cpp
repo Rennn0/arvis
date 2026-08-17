@@ -2,7 +2,9 @@
 
 #include <cctype>
 #include <cfloat>
+#include <cmath>
 #include <string>
+#include <algorithm>
 
 #include <boost/algorithm/clamp.hpp>
 #include <boost/algorithm/cxx11/all_of.hpp>
@@ -72,7 +74,7 @@ namespace
     // a key that can be written as `.name` in a path instead of `["name"]`.
     bool is_identifier(const std::string &key)
     {
-        if (key.empty() || (key.front() >= '0' && key.back() <= '9'))
+        if (key.empty() || (key.front() >= '0' && key.front() <= '9'))
             return false;
 
         return boost::algorithm::all_of(key, boost::is_alnum() || boost::is_any_of("_$"));
@@ -124,7 +126,7 @@ namespace avUi
         this->matched.assign(n, 0);
         this->keep.assign(n, 1);
         const std::uint16_t seed_dep = (n <= auto_expand_max_rows) ? 1 : 0;
-        for (std::size_t i = 0; i < 0; i++)
+        for (std::size_t i = 0; i < n; i++)
             this->open[i] = static_cast<std::uint8_t>(this->rows[i].depth <= seed_dep);
         this->visible_dirty = true;
     }
@@ -184,41 +186,303 @@ namespace avUi
                 this->stats.leaves++;
             if (r.parent >= 0 && this->rows[r.parent].kind == JsonKind::object)
                 this->stats.keys++;
-            this->stats.max_depth == std::max(this->stats.max_depth, static_cast<size_t>(r.depth + 1));
+            this->stats.max_depth = std::max(this->stats.max_depth, static_cast<size_t>(r.depth + 1));
         }
     }
 
     void JsonTreeView::apply_filter()
     {
+        const size_t n = this->rows.size();
+        this->matched.assign(n, 0);
+        this->keep.assign(n, 0);
+        this->hits = 0;
+        this->visible_dirty = true;
+
+        if (this->filter.empty())
+        {
+            std::fill(this->keep.begin(), this->keep.end(), static_cast<uint8_t>(1));
+            return;
+        }
+
+        // 1. direct hits. Containers are matched on their key only — matching their "{ 5 }"
+        //    summary would make every digit in the search box light up half the document
+        for (size_t i = 0; i < n; i++)
+        {
+            const Row &row = this->rows[i];
+            const bool hit = boost::algorithm::icontains(row.label, this->filter) ||
+                             (!row.container && boost::algorithm::icontains(row.text, this->filter));
+            this->matched[i] = static_cast<uint8_t>(hit);
+            this->hits += hit ? 1u : 0u;
+        }
+
+        // 2. forward pass — everything *under* a hit is kept wholesale. This is the "need
+        //    whole node" fix: a node that matches drags its entire subtree along instead of
+        //    rendering empty. parent < i, so one sweep in document order is enough.
+        for (size_t i = 0; i < n; i++)
+        {
+            const int32_t parent = this->rows[i].parent;
+            const bool under = parent >= 0 && this->keep[static_cast<size_t>(parent)] != 0;
+            this->keep[i] = static_cast<uint8_t>(this->matched[i]) || under;
+        }
+
+        // 3. reverse pass — ancestors of anything kept stay as breadcrumbs, so the path down
+        //    to a hit is still readable. Writing only to parents (which have a lower index)
+        //    means a single reverse sweep propagates all the way to the root.
+
+        for (size_t i = n; i-- > 0;)
+        {
+            if (!this->keep[i])
+                continue;
+            const int32_t parent = this->rows[i].parent;
+            if (parent >= 0)
+                this->keep[static_cast<size_t>(parent)] = 1;
+        }
+
+        // 4. seed (not force) the fold state so hits are visible without manual clicking.
+        //    Because this writes once per filter edit rather than every frame, a node folded
+        //    afterwards stays folded and clearing the filter doesn't re-collapse the tree
+        for (size_t i = 0; i < n; i++)
+        {
+            if (this->keep[i])
+                this->open[i] = 1;
+        }
     }
 
     void JsonTreeView::rebuild_visible()
     {
+        this->visible.clear();
+        const size_t n = this->rows.size();
+        for (size_t i = 0; i < n;)
+        {
+            const Row &row = this->rows[i];
+            if (!this->keep[i])
+            {
+                i = row.subtree_end; // no hit anywhere below either — skip the whole branch
+                continue;
+            }
+
+            this->visible.push_back(i);
+            i = (row.container && !this->open[i]) ? row.subtree_end : i + 1;
+        }
+
+        this->visible_dirty = false;
+        this->mini_rows = 0; // the row list moved; the minimap bands have to be rebuilt
     }
 
     void JsonTreeView::set_subtree_open(std::int32_t index, bool state)
     {
+        const Row &row = this->rows[index];
+        for (size_t i = index; i < row.subtree_end; i++)
+            this->open[i] = state;
+        this->visible_dirty = true;
     }
 
     std::string JsonTreeView::path_of(std::int32_t index) const
     {
-        return std::string();
+        // walk up to (but not including) the synthetic root row, then unwind.
+        boost::container::small_vector<std::int32_t, 16> chain;
+        for (std::int32_t i = index; i > 0; i = this->rows[static_cast<std::size_t>(i)].parent)
+            chain.push_back(i);
+
+        std::string out;
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+        {
+            const std::string &label = this->rows[static_cast<std::size_t>(*it)].label;
+            if (!label.empty() && label.front() == '[')
+            {
+                out += label; // array index, already bracketed
+            }
+            else if (is_identifier(label))
+            {
+                out.push_back('.');
+                out += label;
+            }
+            else
+            {
+                std::string quoted = label;
+                boost::algorithm::replace_all(quoted, "\\", "\\\\");
+                boost::algorithm::replace_all(quoted, "\"", "\\\"");
+                out += "[\"" + quoted + "\"]";
+            }
+        }
+
+        return out.empty() ? std::string(".") : out;
     }
 
     void JsonTreeView::render_row(std::int32_t index)
     {
+        using namespace ImGui;
+        const Row &row = this->rows[index];
+
+        TableNextRow();
+        TableSetColumnIndex(0);
+        PushID(index);
+
+        const float indent = row.depth * indent_width;
+        if (index > 0)
+            Indent(indent);
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if (!row.container)
+            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet;
+
+        const bool hit = !this->filter.empty() && this->matched[index] != 0;
+        if (hit)
+            PushStyleColor(ImGuiCol_Text, col_hit);
+        SetNextItemOpen(this->open[index] != 0, ImGuiCond_Always);
+        const bool nowOpen = TreeNodeEx(row.label.c_str(), flags);
+        if (hit)
+            PopStyleColor();
+        if (row.container)
+        {
+            const bool isOpen = this->open[index] != 0;
+            if (GetIO().KeyAlt && IsItemClicked(ImGuiMouseButton_Left))
+            {
+                this->set_subtree_open(index, !isOpen);
+            }
+            else if (nowOpen != isOpen)
+            {
+                this->open[index] = nowOpen;
+                this->visible_dirty = true;
+            }
+        }
+        this->node_context_menu(index);
+        if (indent > 0)
+            Unindent(indent);
+
+        TableSetColumnIndex(1);
+        const float colW = GetContentRegionAvail().x;
+        PushStyleColor(ImGuiCol_Text, row.container ? col_meta : kind_color(row.kind));
+        TextUnformatted(row.text.c_str(), row.text.c_str() + row.text.size());
+        PopStyleColor();
+        if (IsItemHovered())
+        {
+            const ImVec2 size = CalcTextSize(row.text.c_str(), row.text.c_str() + row.text.size());
+            if (size.x > colW || row.truncated)
+            {
+                BeginTooltip();
+                PushTextWrapPos(GetFontSize() * 40.f);
+                TextUnformatted(row.text.c_str(), row.text.c_str() + row.text.size());
+                if (row.truncated)
+                    TextDisabled("(truncated for display - right click > copy value for the full text)");
+                PopTextWrapPos();
+                EndTooltip();
+            }
+        }
+        PopID();
     }
 
     void JsonTreeView::node_context_menu(std::int32_t index)
     {
+        using namespace ImGui;
+        if (!BeginPopupContextItem())
+            return;
+        const Row &row = this->rows[index];
+        const nlohmann::json *val = row.value;
+        if (MenuItem("copy key"))
+            SetClipboardText(row.label.c_str());
+        if (MenuItem("copy value"))
+            SetClipboardText((val->is_string() ? val->get<std::string>() : val->dump(2)).c_str());
+        if (MenuItem("copy key + value"))
+            SetClipboardText((row.label + ": " + (val->is_string() ? val->get<std::string>() : val->dump(2))).c_str());
+        if (MenuItem("copy path"))
+            SetClipboardText(this->path_of(index).c_str());
+        if (row.container)
+        {
+            Separator();
+            if (MenuItem("expand subtree"))
+                this->set_subtree_open(index, true);
+            if (MenuItem("collapse subtree"))
+                this->set_subtree_open(index, false);
+        }
+        EndPopup();
     }
 
     void JsonTreeView::build_minimap(float stripH)
     {
+        const size_t count = this->visible.size();
+        const size_t bands = static_cast<size_t>(std::max(1.f, std::floor(stripH / minimap_band_px)));
+        const size_t want = std::min(count, bands);
+
+        if (want == this->mini.size() && count == this->mini_rows && stripH == this->mini_height)
+            return;
+
+        this->mini.assign(want, MiniBand{});
+        this->mini_rows = count;
+        this->mini_height = stripH;
+        if (want == 0)
+            return;
+
+        for (size_t i = 0; i < count; i++)
+        {
+            const size_t b = std::min(want - 1, i * want / count);
+            const size_t index = this->visible[i];
+            const Row &row = this->rows[index];
+            MiniBand &mb = this->mini[b];
+            if (mb.rows++ == 0)
+            {
+                mb.depth = std::min<int>(row.depth, 255);
+                mb.kind = row.kind;
+            }
+            mb.match = mb.match || this->matched[index] != 0;
+        }
     }
 
     void JsonTreeView::render_minimap(float w, float h)
     {
+        using namespace ImGui;
+        InvisibleButton("##jsonminimap", ImVec2(w, std::max(h, 1.f)));
+        const ImVec2 pMin = GetItemRectMin();
+        const ImVec2 pMax = GetItemRectMax();
+        const float stripH = pMax.y - pMin.y;
+        if (stripH <= 0)
+            return;
+
+        this->build_minimap(stripH);
+        ImDrawList *draw = GetWindowDrawList();
+        draw->AddRectFilled(pMin, pMax, GetColorU32(ImGuiCol_FrameBg), 2.f);
+        if (!this->mini.empty())
+        {
+            const float bandH = stripH / this->mini.size();
+            for (size_t b = 0; b < this->mini.size(); b++)
+            {
+                const MiniBand &band = this->mini[b];
+                const float y = pMin.y + b * bandH;
+                const float barh = std::max(1.f, bandH - .5f);
+
+                const float indent = std::min<float>(band.depth, 6) * 1.5;
+                const ImVec4 c = kind_color(band.kind);
+                draw->AddRectFilled(ImVec2(pMin.x + 2.f + indent, y), ImVec2(pMax.x - 2.f, y + barh),
+                                    GetColorU32(ImVec4(c.x, c.y, c.z, 0.55f)));
+
+                // filter hits get a full-width tick so they are findable without scrolling.
+                if (band.match)
+                    draw->AddRectFilled(ImVec2(pMin.x, y), ImVec2(pMax.x, y + std::max(2.f, bandH)),
+                                        GetColorU32(col_hit));
+            }
+        }
+        // content_h == scroll_max_y + view_h, so the on-screen slice needs no row maths.
+        const float content_h = this->scroll_max_y + this->view_h;
+        const float span = content_h > 0.f ? boost::algorithm::clamp(this->view_h / content_h, 0.f, 1.f) : 1.f;
+        if (content_h > 0.f)
+        {
+            const float top = boost::algorithm::clamp(this->scroll_y / content_h, 0.f, 1.f);
+            const ImVec2 vmin(pMin.x, pMin.y + top * stripH);
+            const ImVec2 vmax(pMax.x, pMin.y + std::min(1.f, top + span) * stripH);
+            draw->AddRectFilled(vmin, vmax, GetColorU32(ImGuiCol_TextSelectedBg, 0.45f));
+            draw->AddRect(vmin, vmax, GetColorU32(ImGuiCol_Border));
+        }
+
+        // click or drag anywhere on the strip to jump there, centred on the cursor. The table
+        // is already closed for this frame, so the scroll is queued and applied on the next.
+        if (IsItemActive())
+        {
+            const float local = boost::algorithm::clamp((GetIO().MousePos.y - pMin.y) / stripH, 0.f, 1.f);
+            const float usable = std::max(1.f - span, 0.0001f);
+            this->pending_scroll = boost::algorithm::clamp((local - span * .5f) / usable, 0.f, 1.f);
+        }
+        if (IsItemHovered())
+            SetMouseCursor(ImGuiMouseCursor_Hand);
     }
 
     void JsonTreeView::render_pretty()
