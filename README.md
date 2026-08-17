@@ -23,7 +23,7 @@
 </p>
 
 ---
-
+![highlights](assets/arv_highlights.gif)
 ## Small on purpose
 
 arvis is a native binary — no Chromium, no Node runtime, no per-tab renderer
