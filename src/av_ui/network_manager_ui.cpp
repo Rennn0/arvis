@@ -70,7 +70,7 @@ namespace avUi
 
         while (!glfwWindowShouldClose(this->window))
         {
-            glfwWaitEvents();
+            glfwWaitEventsTimeout(this->fps);
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
