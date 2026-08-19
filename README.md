@@ -27,8 +27,8 @@
 ## Small on purpose
 
 arvis is a native binary — no Chromium, no Node runtime, no per-tab renderer
-process. A real ~10-minute working session (open the app, edit requests, send,
-browse JSON responses) holds **~105 MB of RAM in a single process**, inside a
+process. A real ~30-minute working session (open the app, edit requests, send,
+browse JSON responses) holds **~55 MB of RAM in a single process**, inside a
 1.6 MB band with no sawtooth and no creep, while burning **0.3 – 0.6 % CPU** —
 and it drops to **0 % when idle**. The release binary is
 **~13 MB** with no runtime to install beside it; the Windows build is statically
