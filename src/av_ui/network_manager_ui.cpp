@@ -1,29 +1,7 @@
 #include <av_ui/network_manager_ui.hpp>
 #include <av_ui/logo_icon.hpp>
 #include <av_ui/root_ui.hpp>
-
-// Including <GLFW/glfw3.h> without GLFW_INCLUDE_NONE also pulls in the platform
-// OpenGL header, giving us the GL 1.1 calls (glViewport/glClear/...) we use for
-// the frame clear — portably across Windows/Linux/macOS.
-
-// Win32-only: reach the native HWND so DWM can paint the OS title bar (caption +
-// min/max/close) in the dark theme. GLFW doesn't expose this. Guarded so the
-// Linux/macOS builds are untouched; dwmapi is auto-linked via #pragma comment.
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#include <dwmapi.h>
-#pragma comment(lib, "dwmapi.lib")
-#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
-#define DWMWA_USE_IMMERSIVE_DARK_MODE 20 // Win10 20H1+ / Win11; value fixed by DWM
-#endif
-#endif
 
 namespace avUi
 {
@@ -74,7 +52,6 @@ namespace avUi
 
         glfwMakeContextCurrent(this->window);
         glfwMaximizeWindow(this->window);
-        glfwSwapInterval(1);
 
         GLFWimage icons[avUi::logo_icon_count]{};
 
@@ -82,14 +59,6 @@ namespace avUi
             icons[i] = GLFWimage{avUi::logo_icon_images[i].width, avUi::logo_icon_images[i].height,
                                  avUi::logo_icon_images[i].pixels};
         glfwSetWindowIcon(this->window, avUi::logo_icon_count, icons);
-
-#ifdef _WIN32
-        {
-            HWND hwnd = glfwGetWin32Window(this->window);
-            BOOL useDark = TRUE;
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDark, sizeof(useDark));
-        }
-#endif
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -99,18 +68,8 @@ namespace avUi
 
         std::unique_ptr<avR::UiComponent> rootUi = std::make_unique<avUi::RootUi>("root");
 
-        // double lastFrame = 0.;
         while (!glfwWindowShouldClose(this->window))
         {
-            // glfwWaitEventsTimeout(this->fps);
-
-            // double now = glfwGetTime();
-            // double delta = now - lastFrame;
-            // if (delta < this->fps)
-            //     continue;
-            // lastFrame = now;
-
-            // #NOTE it goes idle imediately when no input event
             glfwWaitEvents();
 
             ImGui_ImplOpenGL3_NewFrame();
