@@ -23,7 +23,8 @@ namespace avUi
 
     const size_t TabBarUi::getActiveTab() const
     {
-        return static_cast<size_t>(this->_activeTab);
+        const size_t at = static_cast<size_t>(this->_activeTab);
+        return at;
     }
 
     void TabBarUi::render()
@@ -69,9 +70,8 @@ namespace avUi
         }
 
         ImDrawList *dl = GetWindowDrawList();
-        dl->AddRectFilled(trackMin, trackMax, IM_COL32(255, 255, 255, 12), trackH * .5);
-        dl->AddRect(trackMin, trackMax, IM_COL32(255, 255, 255, 18), trackH * .5);
-
+        dl->AddRectFilled(trackMin, trackMax, IM_COL32(72, 72, 77, 25), trackH * .5);
+        dl->AddRect(trackMin, trackMax, IM_COL32(72, 72, 77, 55), trackH * .5);
         if (hovered >= 0 && hovered != this->_activeTab)
         {
             const ImVec2 hoverMin = ImVec2(trackMin.x + this->_trackPad + segW * hovered, trackMin.y + this->_trackPad);
@@ -80,7 +80,6 @@ namespace avUi
         }
 
         ImVec4 accent = GetStyleColorVec4(ImGuiCol_TabSelected);
-        accent.w = .95;
         const ImVec2 pillMin = ImVec2(trackMin.x + this->_trackPad + this->_tabPillOff, trackMin.y + this->_trackPad);
         const ImVec2 pillMax = ImVec2(pillMin.x + segW, pillMin.y + segH);
         dl->AddRectFilled(pillMin, pillMax, GetColorU32(accent), segH * .5);
@@ -89,7 +88,7 @@ namespace avUi
         for (size_t i = 0; i < segmentCount; i++)
         {
             const Segment &seg = this->segments[i];
-            const bool active = i == this->_activeTab;
+            const bool active = i == static_cast<size_t>(this->_activeTab);
             const bool hasBadge = seg.badgeEnabled && *seg.badgeEnabled && seg.countBadge;
             char badgeBuff[8];
             if (hasBadge && *seg.countBadge > 99)
@@ -110,7 +109,7 @@ namespace avUi
             ImU32 labelColor;
             if (active)
                 labelColor = IM_COL32_WHITE;
-            else if (i == hovered)
+            else if (i == static_cast<size_t>(hovered))
                 labelColor = GetColorU32(ImGuiCol_Text);
             else
                 labelColor = GetColorU32(ImGuiCol_TextDisabled);

@@ -69,7 +69,7 @@ namespace avUi
         this->tabs = std::make_unique<avUi::TabBarUi>("tabs");
         this->_tab_badge_enabled = true;
         this->tabs->addTab("history", &this->_tab_badge_enabled, new int(4));
-        this->tabs->addTab("saved", &this->_tab_badge_enabled, new int(55));
+        this->tabs->addTab("saved", &this->_tab_badge_enabled, new int(155));
     }
 
     RequstListViewUi::~RequstListViewUi()
