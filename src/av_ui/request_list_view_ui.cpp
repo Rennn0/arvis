@@ -1,7 +1,6 @@
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/settings_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
-#include <av_ui/tab_bar_ui.hpp>
 #include <av_s/av_environment_storage.hpp>
 #include <ranges>
 #include <algorithm>
@@ -9,9 +8,6 @@
 
 namespace avUi
 {
-    TabBarUi tabs("tabs");
-    bool badgeEnabled = true;
-
     bool try_swap(std::vector<std::shared_ptr<avR::AvRequest>> &vec, avR::AvRequest *r1, avR::AvRequest *r2)
     {
         auto it1 = std::find_if(vec.begin(), vec.end(),
@@ -70,8 +66,10 @@ namespace avUi
 
         this->shared_state->on_new_request.emplace([this]() { this->new_request(); });
 
-        tabs.addTab("history", &badgeEnabled, new int(4));
-        tabs.addTab("saved", &badgeEnabled, new int(55));
+        this->tabs = std::make_unique<avUi::TabBarUi>("tabs");
+        this->_tab_badge_enabled = true;
+        this->tabs->addTab("history", &this->_tab_badge_enabled, new int(4));
+        this->tabs->addTab("saved", &this->_tab_badge_enabled, new int(55));
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -149,50 +147,17 @@ namespace avUi
     }
     void RequstListViewUi::render_main_content(const ImGuiStyle &style)
     {
-        tabs.draw();
-        const avR::AvRequest *selected = this->shared_state->display_request;
-        switch (tabs.getActiveTab())
+        this->tabs->draw();
+        switch (this->tabs->getActiveTab())
         {
         case 0:
-            badgeEnabled = true;
-            ImGui::Dummy(ImVec2(0.0f, 5.0f));
-            ImGui::Indent(12.f);
-            ImGui::TextDisabled("Today");
-            ImGui::Unindent(12.f);
-            ImGui::Dummy(ImVec2(0.0f, 5.0f));
-            for (std::shared_ptr<avR::AvRequest> &request :
-                 this->request_list_state->requests |
-                     std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
-                                        { return root.is_today(req->timestamp); }))
-            {
-                this->render_request_row(selected, request.get(), style);
-            }
-            ImGui::Dummy(ImVec2(0.0f, 5.0f));
-            ImGui::Separator();
-            ImGui::Dummy(ImVec2(0.0f, 5.0f));
-            for (std::shared_ptr<avR::AvRequest> &request :
-                 this->request_list_state->requests |
-                     std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
-                                        { return !root.is_today(req->timestamp); }))
-            {
-                this->render_request_row(selected, request.get(), style);
-            }
-
-            if (this->pending_delete_req.has_value())
-            {
-                const int64_t id = this->pending_delete_req.value();
-                if (this->shared_state->display_request && this->shared_state->display_request->id == id)
-                    this->shared_state->display_request = nullptr;
-
-                this->request_storage->del(id);
-                std::erase_if(this->request_list_state->requests,
-                              [id](std::shared_ptr<avR::AvRequest> x) { return x->id == id; });
-
-                this->pending_delete_req.reset();
-            }
+            this->render_tab_history(style);
+            break;
+        case 1:
+            this->render_tab_saved(style);
             break;
         default:
-            badgeEnabled = false;
+            this->render_tab_history(style);
             break;
         }
     }
@@ -200,7 +165,6 @@ namespace avUi
     {
         const float savedTxtOffset = 15.f;
         const int savedCount = this->request_list_state->requests.size();
-        ;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + savedTxtOffset);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("%d saved", savedCount);
@@ -215,6 +179,53 @@ namespace avUi
             this->shared_state->on_show_settings.value()(static_cast<size_t>(avUi::Section::Environment));
         }
         ImGui::SetItemTooltip("modify environment variables");
+    }
+
+    void RequstListViewUi::render_tab_history(const ImGuiStyle &style)
+    {
+        const avR::AvRequest *selected = this->shared_state->display_request;
+
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::Indent(12.f);
+        ImGui::TextDisabled("Today");
+        ImGui::Unindent(12.f);
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        for (std::shared_ptr<avR::AvRequest> &request :
+             this->request_list_state->requests | std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
+                                                                     { return root.is_today(req->timestamp); }))
+        {
+            this->render_request_row(selected, request.get(), style);
+        }
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        for (std::shared_ptr<avR::AvRequest> &request :
+             this->request_list_state->requests | std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
+                                                                     { return !root.is_today(req->timestamp); }))
+        {
+            this->render_request_row(selected, request.get(), style);
+        }
+
+        if (this->pending_delete_req.has_value())
+        {
+            const int64_t id = this->pending_delete_req.value();
+            if (this->shared_state->display_request && this->shared_state->display_request->id == id)
+                this->shared_state->display_request = nullptr;
+
+            this->request_storage->del(id);
+            std::erase_if(this->request_list_state->requests,
+                          [id](std::shared_ptr<avR::AvRequest> x) { return x->id == id; });
+
+            this->pending_delete_req.reset();
+        }
+    }
+
+    void RequstListViewUi::render_tab_saved(const ImGuiStyle &style)
+    {
+        ImGui::Dummy(ImVec2(0.0f, 5.0f));
+        ImGui::Indent(12.f);
+        ImGui::TextDisabled("Nothing saved");
+        ImGui::Unindent(12.f);
     }
 
     void RequstListViewUi::render_request_row(const avR::AvRequest *selected, avR::AvRequest *request,
