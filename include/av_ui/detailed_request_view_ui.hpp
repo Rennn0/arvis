@@ -8,6 +8,7 @@
 #include <av_s/av_request_params_storage.hpp>
 #include <av_s/av_request_headers_storage.hpp>
 #include <av_s/av_request_cookies_storage.hpp>
+#include <av_ui/tab_bar_ui.hpp>
 
 namespace avUi
 {
@@ -31,6 +32,7 @@ namespace avUi
         std::unique_ptr<avS::AvRequestParamsStorage> request_params_storage;
         std::unique_ptr<avS::AvRequestHeadersStorage> request_headers_storage;
         std::unique_ptr<avS::AvRequestCookiesStorage> request_cookies_storage;
+        std::unique_ptr<avUi::TabBarUi> _tabs;
 
         // networking: the request runs off the UI thread so a slow/dead endpoint never
         // freezes the window. pending_response is declared last so it is destroyed first,
