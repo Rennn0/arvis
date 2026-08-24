@@ -153,7 +153,10 @@ namespace avUi
     void RootUi::render()
     {
         for (const std::unique_ptr<UiComponent> &child : get_children())
+        {
+            child->update();
             child->draw();
+        }
 
         this->inter_view_state->shortcutManager.process();
     }

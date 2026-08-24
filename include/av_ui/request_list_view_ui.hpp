@@ -18,6 +18,8 @@ namespace avUi
 
     private:
         void render() override;
+        void update() override;
+        
         ImGuiWindowFlags windowFlags;
         avR::AvInterViewSharedState *shared_state;
         std::string filter_text;
@@ -26,6 +28,8 @@ namespace avUi
         std::unique_ptr<avUi::TabBarUi> tabs;
 
         bool _tab_badge_enabled;
+        int _tab_history_counter_badge = 0;
+        int _tab_saved_counter_badge = 0;
 
         std::optional<int64_t> pending_delete_req;
 

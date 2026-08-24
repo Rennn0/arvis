@@ -47,6 +47,10 @@ namespace avR
         ImGui::PopID();
     }
 
+    void UiComponent::update()
+    {
+    }
+
     UiComponent *UiComponent::add_child(std::unique_ptr<UiComponent> child)
     {
         this->children.push_back(std::move(child));

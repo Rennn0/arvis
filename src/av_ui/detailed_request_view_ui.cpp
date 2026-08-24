@@ -118,10 +118,6 @@ namespace avUi
             // footer (response) agree within the same frame.
             this->poll_response();
 
-            tabParamCountBadge = displayReq->params.size();
-            tabHeaderCountBadge = displayReq->headers.size();
-            tabCookieCountBadge = displayReq->cookies.size();
-
             const ImGuiStyle &style = ImGui::GetStyle();
             const ImVec2 availRegion = ImGui::GetContentRegionAvail();
 
@@ -187,8 +183,19 @@ namespace avUi
                 switchStyles = false;
             }
             ImGui::End();
-        }
+        }   
     }
+
+    void DetailedRequestViewUi::update()
+    {
+        const avR::AvRequest *displayReq = this->shared_state->display_request;
+        if (!displayReq)
+            return;
+        tabParamCountBadge = displayReq->params.size();
+        tabHeaderCountBadge = displayReq->headers.size();
+        tabCookieCountBadge = displayReq->cookies.size();
+    }
+
     void DetailedRequestViewUi::render_header(const ImGuiStyle &style)
     {
         avR::AvRequest &req = *this->shared_state->display_request;

@@ -68,8 +68,8 @@ namespace avUi
 
         this->tabs = std::make_unique<avUi::TabBarUi>("tabs");
         this->_tab_badge_enabled = true;
-        this->tabs->addTab("history", &this->_tab_badge_enabled, new int(4));
-        this->tabs->addTab("saved", &this->_tab_badge_enabled, new int(155));
+        this->tabs->addTab("history", &this->_tab_badge_enabled, &this->_tab_history_counter_badge);
+        this->tabs->addTab("saved", &this->_tab_badge_enabled, &this->_tab_saved_counter_badge);
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -110,6 +110,13 @@ namespace avUi
         };
         ImGui::End();
     }
+
+    void RequstListViewUi::update()
+    {
+        this->_tab_history_counter_badge = this->shared_state->request_list_state->requests.size();
+        // this->_tab_saved_counter_badge = 0;
+    }
+
     void RequstListViewUi::render_header(const ImGuiStyle &style)
     {
         const float marginTop = 10.f;

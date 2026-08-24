@@ -25,6 +25,7 @@ namespace avUi
         float footer_height;
 
         void render() override;
+        void update() override;
 
         ImGuiWindowFlags window_flags;
         avR::AvInterViewSharedState *shared_state;

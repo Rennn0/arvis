@@ -43,6 +43,8 @@ namespace avR
         ///        implement render(), never draw().
         virtual void draw();
 
+        virtual void update();
+
         UiComponent *add_child(std::unique_ptr<UiComponent> child);
         UiComponent &set_on_click(std::function<void()> handler);
         const std::string &get_id() const noexcept;
