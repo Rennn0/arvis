@@ -77,8 +77,8 @@ namespace avUi
 
         _tabs->addTab("params", &tabParamBadgeEnabled, &tabParamCountBadge);
         _tabs->addTab("headers", &tabHeaderBadgeEnabled, &tabHeaderCountBadge);
-        _tabs->addTab("body");
         _tabs->addTab("cookies", &tabCookieBadgeEnabled, &tabCookieCountBadge);
+        _tabs->addTab("body");
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -123,7 +123,7 @@ namespace avUi
             // footer (response) agree within the same frame.
             this->poll_response();
 
-            const ImGuiStyle &style = ImGui::GetStyle();
+            const ImGuiStyle &imstyle = ImGui::GetStyle();
             const ImVec2 availRegion = ImGui::GetContentRegionAvail();
 
             if (this->footer_height < 0.f)
@@ -136,13 +136,13 @@ namespace avUi
             const float headerHeight = (availRegion.y - this->footer_height) * .1f;
 
             ImGui::BeginChild("header", ImVec2(0, headerHeight));
-            this->render_header(style);
+            this->render_header(imstyle);
             ImGui::EndChild();
 
             ImGui::Separator();
 
             ImGui::BeginChild("main_content", ImVec2(0, -(this->footer_height + splitterThikness)));
-            this->render_main_content(style);
+            this->render_main_content(imstyle);
             ImGui::EndChild();
 
             ImGui::InvisibleButton("##splitter", ImVec2(-1.f, splitterThikness));
@@ -168,7 +168,7 @@ namespace avUi
             }
 
             ImGui::BeginChild("footer", ImVec2(0, 0));
-            this->render_footer(style);
+            this->render_footer(imstyle);
             ImGui::EndChild();
 
             this->render_shortcuts();
@@ -272,7 +272,7 @@ namespace avUi
             ImGui::SetItemTooltip("press ctrl+s to save");
         }
     }
-    void DetailedRequestViewUi::render_main_content(const ImGuiStyle &style)
+    void DetailedRequestViewUi::render_main_content(const ImGuiStyle &imstyle)
     {
         this->_tabs->draw();
         ImGui::Spacing();
@@ -285,10 +285,10 @@ namespace avUi
             this->render_tab_headers();
             break;
         case 2:
-            this->render_tab_body();
+            this->render_tab_cookies();
             break;
         case 3:
-            this->render_tab_cookies();
+            this->render_tab_body();
             break;
         default:
             this->render_tab_params();
