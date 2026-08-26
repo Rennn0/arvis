@@ -667,7 +667,7 @@ namespace avUi
             ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("description", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("include", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::TableSetupColumn("##delete", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("##delete", ImGuiTableColumnFlags_WidthFixed, 30);
             ImGui::TableHeadersRow();
 
             for (avR::AvRequestParam &item : this->shared_state->display_request->params)
@@ -768,7 +768,7 @@ namespace avUi
             ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("include", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::TableSetupColumn("##delete", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("##delete", ImGuiTableColumnFlags_WidthFixed, 30);
             ImGui::TableHeadersRow();
 
             for (avR::AvRequestHeader &header : this->shared_state->display_request->headers)
@@ -836,7 +836,7 @@ namespace avUi
             ImGui::TableSetupColumn("key", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("include", ImGuiTableColumnFlags_WidthFixed);
-            ImGui::TableSetupColumn("##delete", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("##delete", ImGuiTableColumnFlags_WidthFixed, 30);
             ImGui::TableHeadersRow();
 
             for (avR::AvRequestCookie &cookie : this->shared_state->display_request->cookies)

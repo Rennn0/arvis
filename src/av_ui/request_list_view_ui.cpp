@@ -85,7 +85,8 @@ namespace avUi
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         const float x = viewport->WorkSize.x;
         const float y = viewport->WorkSize.y;
-        const float panelW = std::max(this->shared_state->_min_left_panel_width, x * this->shared_state->_left_panel_ratio);
+        const float panelW =
+            std::max(this->shared_state->_min_left_panel_width, x * this->shared_state->_left_panel_ratio);
         ImGui::SetNextWindowPos(viewport->WorkPos, ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(panelW, y), ImGuiCond_Always);
 
@@ -190,29 +191,34 @@ namespace avUi
         ImGui::SetItemTooltip("modify environment variables");
     }
 
-    void RequstListViewUi::render_tab_history(const ImGuiStyle &style)
+    void RequstListViewUi::render_tab_history(const ImGuiStyle &imstyle)
     {
         const avR::AvRequest *selected = this->shared_state->display_request;
 
-        ImGui::Dummy(ImVec2(0.0f, 5.0f));
-        ImGui::Indent(12.f);
-        ImGui::TextDisabled("Today");
-        ImGui::Unindent(12.f);
-        ImGui::Dummy(ImVec2(0.0f, 5.0f));
-        for (std::shared_ptr<avR::AvRequest> &request :
-             this->request_list_state->requests | std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
-                                                                     { return root.is_today(req->timestamp); }))
+        auto todaysRequests =
+            this->request_list_state->requests | std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
+                                                                    { return root.is_today(req->timestamp); });
+        if (!todaysRequests.empty())
         {
-            this->render_request_row(selected, request.get(), style);
+            ImGui::Dummy(ImVec2(0.0f, 5.0f));
+            ImGui::Indent(12.f);
+            ImGui::TextDisabled("Today");
+            ImGui::Unindent(12.f);
+            ImGui::Dummy(ImVec2(0.0f, 5.0f));
+
+            for (std::shared_ptr<avR::AvRequest> &request : todaysRequests)
+            {
+                this->render_request_row(selected, request.get(), imstyle);
+            }
+            ImGui::Dummy(ImVec2(0.0f, 5.0f));
+            ImGui::Separator();
         }
-        ImGui::Dummy(ImVec2(0.0f, 5.0f));
-        ImGui::Separator();
         ImGui::Dummy(ImVec2(0.0f, 5.0f));
         for (std::shared_ptr<avR::AvRequest> &request :
              this->request_list_state->requests | std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
                                                                      { return !root.is_today(req->timestamp); }))
         {
-            this->render_request_row(selected, request.get(), style);
+            this->render_request_row(selected, request.get(), imstyle);
         }
 
         if (this->pending_delete_req.has_value())
