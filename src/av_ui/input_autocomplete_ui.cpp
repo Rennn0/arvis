@@ -30,6 +30,8 @@ namespace avUi
         flags |= ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCompletion |
                  ImGuiInputTextFlags_CallbackHistory;
         const bool changed = ImGui::InputText(label, str, flags, &internal::callback, &state);
+        const std::string_view tooltip = *str;
+        ImGui::SetItemTooltip(resolve_vars(tooltip.data(), variables).c_str());
         const ImVec2 itemMin = ImGui::GetItemRectMin();
         const ImVec2 itemMax = ImGui::GetItemRectMax();
         const bool active = ImGui::IsItemActive();
