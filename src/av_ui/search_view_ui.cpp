@@ -110,7 +110,7 @@ namespace avUi
                                        ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavInputs |
                                        ImGuiWindowFlags_AlwaysAutoResize;
         center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         if (ImGui::Begin("search", &this->shared_state->show_search_view, flags))
         {
             if (this->want_focus)

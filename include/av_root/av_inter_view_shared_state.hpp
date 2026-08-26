@@ -18,6 +18,10 @@ namespace avR
         bool show_search_view = false;
         bool show_settings_view = false;
         bool is_init = false;
+
+        const float _left_panel_ratio = .2f;
+        const float _min_left_panel_width = 180.f;
+
         AvRequest *display_request;
         avR::AvRequestListState *request_list_state;
         std::shared_ptr<avR::AvAppSettings> app_settings;
