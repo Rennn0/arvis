@@ -42,7 +42,8 @@ namespace avUi
           network_manager(this->request_storage->get_db_path()), json_view(std::make_unique<JsonTreeView>())
     {
         this->window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoMove |
-                             ImGuiWindowFlags_NoResize;
+                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
+                             ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
 
     DetailedRequestViewUi::DetailedRequestViewUi(std::string id, avR::AvState *sharedState) : DetailedRequestViewUi(id)
@@ -95,8 +96,12 @@ namespace avUi
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         const float x = viewport->WorkSize.x;
         const float y = viewport->WorkSize.y;
-        ImGui::SetNextWindowPos(ImVec2(x * .2f, 0), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(x * .8f, y), ImGuiCond_Once);
+        const bool listVisible = this->shared_state && this->shared_state->show_req_list_view;
+        const float leftW =
+            listVisible ? std::max(this->shared_state->_min_left_panel_width, x * this->shared_state->_left_panel_ratio)
+                        : 0.f;
+        ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + leftW, viewport->WorkPos.y), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(x - leftW, y), ImGuiCond_Always);
 
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->window_flags))
         {
@@ -183,7 +188,7 @@ namespace avUi
                 switchStyles = false;
             }
             ImGui::End();
-        }   
+        }
     }
 
     void DetailedRequestViewUi::update()

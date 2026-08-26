@@ -46,7 +46,8 @@ namespace avUi
         : avR::UiComponent(std::move(id)), request_list_state(std::make_shared<avR::AvRequestListState>()),
           request_storage(std::make_unique<avS::AvRequestStorage>())
     {
-        this->windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+        this->windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus;
     }
 
     RequstListViewUi::RequstListViewUi(std::string id, avR::AvState *sharedState) : RequstListViewUi(id)
@@ -84,8 +85,9 @@ namespace avUi
         const ImGuiViewport *viewport = ImGui::GetMainViewport();
         const float x = viewport->WorkSize.x;
         const float y = viewport->WorkSize.y;
-        ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(x * .2f, y), ImGuiCond_Once);
+        const float panelW = std::max(this->shared_state->_min_left_panel_width, x * this->shared_state->_left_panel_ratio);
+        ImGui::SetNextWindowPos(viewport->WorkPos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(panelW, y), ImGuiCond_Always);
 
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_list_view, this->windowFlags))
         {
