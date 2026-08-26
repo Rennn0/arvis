@@ -147,27 +147,3 @@ cmake --preset windows
 cmake --build --preset windows-debug    # or: windows-release
 .\build\windows\Debug\arvis.exe
 ```
-
----
-
-## Todos
- - response info (x)
- - reopen last modified req (x)
- - finder shortcut/window for requests (x)
- - req history tree
- - req list filter
- - req params env variable tooltip current value
- - saved requests (saved = is inside some collection/folder thus it will hold all sent req history inside)
- - response jwon view (better)
- - - found matching only shows leaf -> need whole node (x)
- - - collapse / fold needs to work recursively (x)
- - - maybe preview map on right edge instead of scrollbar? (x)
- - environment system (inlines defined variable properties into requests)
- - - settings window {env} (x)
- - - settings window {general}
- - - settings window {shortcuts}
- - - settings window {network}
- - schemas for requests
-
-## Bugs
-- RAW option not working in viewer
