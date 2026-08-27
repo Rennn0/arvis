@@ -49,7 +49,8 @@ namespace avS
         for (const U8Field &f : this->_u8_fields)
         {
             const auto it = rows.find(f.key);
-            settings->*f.member = this->parse_u8(it->second, settings->*f.member);
+            if (it != rows.end())
+                settings->*f.member = this->parse_u8(it->second, settings->*f.member);
         }
     }
 } // namespace avS
