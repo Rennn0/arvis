@@ -21,7 +21,6 @@
 <p align="center">
   Built with <a href="https://curl.se/libcurl/">libcurl</a>, <a href="https://github.com/ocornut/imgui">Dear ImGui</a>,  <a href="https://www.glfw.org/">GLFW</a> + OpenGL3 and <a href="https://github.com/SRombauts/SQLiteCpp">SQLiteCpp</a>.
 </p>
-
 ---
 ![highlights](assets/arv_highlights.gif)
 ## Small on purpose
@@ -147,3 +146,5 @@ cmake --preset windows
 cmake --build --preset windows-debug    # or: windows-release
 .\build\windows\Debug\arvis.exe
 ```
+
+Icons: [Font Awesome 6 Free](https://fontawesome.com) — icons CC BY 4.0, fonts SIL OFL 1.1.

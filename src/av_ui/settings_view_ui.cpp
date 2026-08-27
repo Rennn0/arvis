@@ -10,19 +10,20 @@ namespace avUi
     constexpr float kVarIndent = 12.f;
     constexpr float kWindowW = 840.f;
     constexpr float kWindowH = 560.f;
-    constexpr size_t kNoIndex = static_cast<size_t>(-1); // "nothing to erase" sentinel
+    constexpr size_t kNoIndex = static_cast<size_t>(-1);
 
-    const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f); // #15171b
-    const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);   // #52565e
-    const ImVec4 kNavActiveText = ImVec4(0.843f, 0.851f, 0.867f, 1.f); // #d7d9dd
+    const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f); 
+    const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);   
+    const ImVec4 kNavActiveText = ImVec4(0.843f, 0.851f, 0.867f, 1.f); 
 
     const char *const SettingsViewUi::section_labels[] = {
         "General", "Environment", "Shortcuts", "Appearance", "Network",
     };
 
     SettingsViewUi::SettingsViewUi(std::string id, avR::AvState *sharedState)
-        : UiComponent(id), app_settings(std::make_shared<avR::AvAppSettings>()),
+        : UiComponent(id), _app_settings(std::make_shared<avR::AvAppSettings>()),
           env_storage(std::make_unique<avS::AvEnvironmentStorage>()),
+          _app_settings_storage(std::make_unique<avS::AvAppSettingsStorage>()),
           shared_state(static_cast<avR::AvInterViewSharedState *>(sharedState)),
           selected_section(static_cast<int>(Section::General))
     {
@@ -32,7 +33,28 @@ namespace avUi
                 s->show_settings_view = !s->show_settings_view;
                 *selected = section;
             });
-        this->shared_state->app_settings = this->app_settings;
+        this->_app_settings_storage->load(this->_app_settings.get());
+        this->shared_state->app_settings = this->_app_settings;
+
+        ImFontAtlas *fontAtlas = ImGui::GetIO().Fonts;
+        for (size_t i = 0; i < fontAtlas->Fonts.size(); i++)
+        {
+            ImFont *font = fontAtlas->Fonts[(int)i];
+            this->_font_settings.emplace_back(
+                avUi::SettingsViewUi::AppearanceToggle{.id = (uint8_t)i,
+                                                       .label = font->ConfigData->Name,
+                                                       .color = NULL,
+                                                       .action =
+                                                           [this, i, font]()
+                                                       {
+                                                           this->_app_settings->_active_font_id = i;
+                                                           ImGui::GetIO().FontDefault = font;
+                                                       }
+
+                });
+        }
+
+        this->apply_settings(*this->_app_settings);
     }
 
     SettingsViewUi::~SettingsViewUi()
@@ -64,6 +86,22 @@ namespace avUi
         }
         End();
     }
+
+    void SettingsViewUi::update()
+    {
+        if (!this->_run_update)
+            return;
+
+        this->_app_settings_storage->save(this->_app_settings.get());
+        _run_update = false;
+    }
+
+    void SettingsViewUi::apply_settings(const avR::AvAppSettings &settings)
+    {
+        this->_theme_settings[settings._active_theme_id].action();
+        this->_font_settings[settings._active_font_id].action();
+    }
+
     void SettingsViewUi::render_nav()
     {
         using namespace ImGui;
@@ -129,15 +167,18 @@ namespace avUi
 
         const Toggle toggles[] = {
             {"save responses to disk", "write every response body under responses.dev/",
-             &this->app_settings->save_responses},
+             &this->_app_settings->_save_responses},
             {"restore last request", "reopen the request that was selected on exit",
-             &this->app_settings->restore_last_req},
-            {"auto save", "automaticaly persist changes (url,param, header ...)", &this->app_settings->_auto_save}};
+             &this->_app_settings->_restore_last_req},
+            {"auto save", "automaticaly persist changes (url,param, header ...)", &this->_app_settings->_auto_save}};
 
         for (const Toggle &t : toggles)
         {
             avR::UiScopedId usid(this);
-            Checkbox(t.label, t.val);
+            if (Checkbox(t.label, t.val))
+            {
+                this->_run_update = true;
+            }
             SameLine();
             TextDisabled("%s", t.desc);
         }
@@ -194,41 +235,19 @@ namespace avUi
     void SettingsViewUi::render_appearance_theme()
     {
         using namespace ImGui;
-        const AppearanceToggle appearnceToggles[] = {AppearanceToggle{.id = 0,
-                                                                      .label = "Light",
-                                                                      .color = this->lightThemeColor,
-                                                                      .action =
-                                                                          [this]()
-                                                                      {
-                                                                          this->app_settings->_active_theme_id = 0;
-                                                                          ImGui::StyleColorsLight();
-                                                                      }},
-                                                     AppearanceToggle{.id = 1,
-                                                                      .label = "Dark",
-                                                                      .color = this->darkThemeColor,
-                                                                      .action =
-                                                                          [this]()
-                                                                      {
-                                                                          this->app_settings->_active_theme_id = 1;
-                                                                          ImGui::StyleColorsDark();
-                                                                      }},
-                                                     AppearanceToggle{.id = 2,
-                                                                      .label = "Classic",
-                                                                      .color = this->classicThemeColor,
-                                                                      .action = [this]()
-                                                                      {
-                                                                          this->app_settings->_active_theme_id = 2;
-                                                                          ImGui::StyleColorsClassic();
-                                                                      }}};
-        if (BeginCombo("Theme", appearnceToggles[this->app_settings->_active_theme_id].label,
+
+        if (BeginCombo("Theme", _theme_settings[this->_app_settings->_active_theme_id].label,
                        ImGuiComboFlags_NoArrowButton))
         {
-            for (size_t i = 0; i < std::size(appearnceToggles); i++)
+            for (size_t i = 0; i < std::size(_theme_settings); i++)
             {
-                const AppearanceToggle &at = appearnceToggles[i];
-                const bool isSelected = at.id == this->app_settings->_active_theme_id;
+                const AppearanceToggle &at = _theme_settings[i];
+                const bool isSelected = at.id == this->_app_settings->_active_theme_id;
                 if (Selectable(at.label, isSelected))
+                {
                     at.action();
+                    _run_update = true;
+                }
                 if (isSelected)
                     SetItemDefaultFocus();
             }
@@ -239,31 +258,19 @@ namespace avUi
     void SettingsViewUi::render_appearance_fonts()
     {
         using namespace ImGui;
-        boost::container::small_vector<AppearanceToggle, 8> toggles;
-        ImFontAtlas *fontAtlas = GetIO().Fonts;
-        for (size_t i = 0; i < fontAtlas->Fonts.size(); i++)
-        {
-            ImFont *font = fontAtlas->Fonts[(int)i];
-            toggles.emplace_back(avUi::SettingsViewUi::AppearanceToggle{.id = (uint8_t)i,
-                                                                        .label = font->ConfigData->Name,
-                                                                        .color = NULL,
-                                                                        .action =
-                                                                            [this, i, font]()
-                                                                        {
-                                                                            this->app_settings->_active_font_id = i;
-                                                                            GetIO().FontDefault = font;
-                                                                        }
 
-            });
-        }
-        if (BeginCombo("Font", toggles[this->app_settings->_active_font_id].label, ImGuiComboFlags_NoArrowButton))
+        if (BeginCombo("Font", this->_font_settings[this->_app_settings->_active_font_id].label,
+                       ImGuiComboFlags_NoArrowButton))
         {
-            for (size_t i = 0; i < std::size(toggles); i++)
+            for (size_t i = 0; i < std::size(this->_font_settings); i++)
             {
-                const AppearanceToggle &at = toggles[i];
-                const bool isSelected = at.id == this->app_settings->_active_font_id;
+                const AppearanceToggle &at = this->_font_settings[i];
+                const bool isSelected = at.id == this->_app_settings->_active_font_id;
                 if (Selectable(at.label, isSelected))
+                {
                     at.action();
+                    this->_run_update = true;
+                }
                 if (isSelected)
                     SetItemDefaultFocus();
             }

@@ -3,6 +3,8 @@
 #include <av_root/av_app_settings.hpp>
 #include <av_root/av_inter_view_shared_state.hpp>
 #include <av_s/av_environment_storage.hpp>
+#include <av_s/av_app_settings_storage.hpp>
+#include <boost/container/small_vector.hpp>
 
 namespace avUi
 {
@@ -38,18 +40,23 @@ namespace avUi
             std::function<void()> action;
         };
 
-        std::shared_ptr<avR::AvAppSettings> app_settings;
+        std::shared_ptr<avR::AvAppSettings> _app_settings;
         std::unique_ptr<avS::AvEnvironmentStorage> env_storage;
+        std::unique_ptr<avS::AvAppSettingsStorage> _app_settings_storage;
         avR::AvInterViewSharedState *shared_state;
         std::vector<avR::AvEnvironment> environments;
         bool envs_loaded = false;
+        bool _run_update = true;
         int64_t env_pending_del = 0;
 
         static const char *const section_labels[static_cast<int>(Section::Count)];
 
         size_t selected_section;
-        void render() override;
 
+        void render() override;
+        void update() override;
+
+        void apply_settings(const avR::AvAppSettings &settings);
         void render_nav();
         void render_content();
 
@@ -65,5 +72,34 @@ namespace avUi
         void reload_environments();
         void set_active_env(const avR::AvEnvironment &env);
         bool is_active_env(const avR::AvEnvironment &env) const;
+
+        const AppearanceToggle _theme_settings[3] = {AppearanceToggle{.id = 0,
+                                                                      .label = "Light",
+                                                                      .color = this->lightThemeColor,
+                                                                      .action =
+                                                                          [this]()
+                                                                      {
+                                                                          this->_app_settings->_active_theme_id = 0;
+                                                                          ImGui::StyleColorsLight();
+                                                                      }},
+                                                     AppearanceToggle{.id = 1,
+                                                                      .label = "Dark",
+                                                                      .color = this->darkThemeColor,
+                                                                      .action =
+                                                                          [this]()
+                                                                      {
+                                                                          this->_app_settings->_active_theme_id = 1;
+                                                                          ImGui::StyleColorsDark();
+                                                                      }},
+                                                     AppearanceToggle{.id = 2,
+                                                                      .label = "Classic",
+                                                                      .color = this->classicThemeColor,
+                                                                      .action = [this]()
+                                                                      {
+                                                                          this->_app_settings->_active_theme_id = 2;
+                                                                          ImGui::StyleColorsClassic();
+                                                                      }}};
+
+        boost::container::small_vector<AppearanceToggle, 8> _font_settings;
     };
 } // namespace avUi
