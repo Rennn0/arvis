@@ -22,7 +22,9 @@
   Built with <a href="https://curl.se/libcurl/">libcurl</a>, <a href="https://github.com/ocornut/imgui">Dear ImGui</a>,  <a href="https://www.glfw.org/">GLFW</a> + OpenGL3 and <a href="https://github.com/SRombauts/SQLiteCpp">SQLiteCpp</a>.
 </p>
 ---
+
 ![highlights](assets/arv_highlights.gif)
+
 ## Small on purpose
 
 arvis is a native binary — no Chromium, no Node runtime, no per-tab renderer
