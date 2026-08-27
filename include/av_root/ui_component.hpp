@@ -26,6 +26,9 @@ namespace avR
         const ImVec4 environment_color = ImColor(8, 249, 24, 255);
 
         const ImU32 tableXButtonColor = IM_COL32(30, 36, 43, 102);
+        const ImU32 darkThemeColor = IM_COL32(0, 0, 0, 255);
+        const ImU32 lightThemeColor = IM_COL32(255, 255, 255, 255);
+        const ImU32 classicThemeColor = IM_COL32(43, 63, 75, 255);
 
         ImVec4 get_method_color(const avNet::request_method &method);
         ImVec4 get_status_color(const int code);
