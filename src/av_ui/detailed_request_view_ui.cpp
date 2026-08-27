@@ -20,7 +20,6 @@ namespace avUi
     int tabParamCountBadge = 0;
     int tabHeaderCountBadge = 0;
     int tabCookieCountBadge = 0;
-    const ImU32 tableXButtonColor = IM_COL32(30, 36, 43, 102);
 
     EnvVars envVars;
     void load_env_vars(avR::AvEnvironment *env)
@@ -656,7 +655,7 @@ namespace avUi
     void DetailedRequestViewUi::render_tab_params() const
     {
         avR::UiScopedStyle style;
-        style.color(ImGuiCol_Button, tableXButtonColor);
+        style.color(ImGuiCol_Button, this->tableXButtonColor);
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchSame;

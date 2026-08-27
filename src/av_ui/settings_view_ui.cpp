@@ -266,31 +266,26 @@ namespace avUi
                 for (size_t v = 0; v < env.vars.size(); ++v)
                 {
                     avR::AvEnvironmentVariable &var = env.vars[v];
-
                     avR::UiScopedId varId(static_cast<int>(v));
+                    avR::UiScopedStyle ss;
+                    ss.color(ImGuiCol_Button, this->tableXButtonColor);
+                    TableNextRow();
+                    TableSetColumnIndex(0);
+                    SetNextItemWidth(-FLT_MIN);
+                    InputTextWithHint("##key", "name", &var.key);
+                    const bool keyCommited = IsItemDeactivatedAfterEdit();
+
+                    TableSetColumnIndex(1);
+                    SetNextItemWidth(-FLT_MIN);
+                    InputTextWithHint("##val", "value", &var.value);
+                    const bool valCommited = IsItemDeactivatedAfterEdit();
+
+                    if (keyCommited || valCommited)
                     {
-                        avR::UiScopedStyle::Style s;
-                        s.frame_border = 0;
-                        s.frame_rounding = 0;
-                        avR::UiScopedStyle ss(s);
-                        TableNextRow();
-                        TableSetColumnIndex(0);
-                        SetNextItemWidth(-FLT_MIN);
-                        InputTextWithHint("##key", "name", &var.key);
-                        const bool keyCommited = IsItemDeactivatedAfterEdit();
-
-                        TableSetColumnIndex(1);
-                        SetNextItemWidth(-FLT_MIN);
-                        InputTextWithHint("##val", "value", &var.value);
-                        const bool valCommited = IsItemDeactivatedAfterEdit();
-
-                        if (keyCommited || valCommited)
-                        {
-                            var.EnvId = env.id;
-                            this->env_storage->upsert_var(var);
-                            if (this->is_active_env(env))
-                                this->set_active_env(env);
-                        }
+                        var.EnvId = env.id;
+                        this->env_storage->upsert_var(var);
+                        if (this->is_active_env(env))
+                            this->set_active_env(env);
                     }
 
                     TableSetColumnIndex(2);

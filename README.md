@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  A cross-platform (Windows / Linux / macOS) C++20 feature rich desktop HTTP client and request inspector with a native GUI.
+  A lightweight, native HTTP client built in C++20 — a fast, local-first alternative to Postman and Insomnia.
 </p>
 <p align="center">
   Focuses on <b>developer experience</b>, shortcuts, quick navigation and simplicity.
