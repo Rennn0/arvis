@@ -1,6 +1,8 @@
 #include <av_ui/settings_view_ui.hpp>
 #include <av_root/ui_scoped_id.hpp>
 #include <cfloat>
+#include <iterator>
+#include <boost/container/small_vector.hpp>
 namespace avUi
 {
     constexpr float kNavWidth = 180.f;
@@ -124,23 +126,17 @@ namespace avUi
     void SettingsViewUi::render_general()
     {
         using namespace ImGui;
-        struct Toggle
-        {
-            const char *label;
-            const char *desc;
-            bool *val;
-        };
 
         const Toggle toggles[] = {
             {"save responses to disk", "write every response body under responses.dev/",
              &this->app_settings->save_responses},
             {"restore last request", "reopen the request that was selected on exit",
              &this->app_settings->restore_last_req},
-        };
+            {"auto save", "automaticaly persist changes (url,param, header ...)", &this->app_settings->_auto_save}};
 
         for (const Toggle &t : toggles)
         {
-            avR::UiScopedId id(this);
+            avR::UiScopedId usid(this);
             Checkbox(t.label, t.val);
             SameLine();
             TextDisabled("%s", t.desc);
@@ -185,12 +181,100 @@ namespace avUi
     }
     void SettingsViewUi::render_shortcuts()
     {
+        using namespace ImGui;
+        TextDisabled("nothing here yet...");
     }
+
     void SettingsViewUi::render_appearance()
     {
+        this->render_appearance_theme();
+        this->render_appearance_fonts();
     }
+
+    void SettingsViewUi::render_appearance_theme()
+    {
+        using namespace ImGui;
+        const AppearanceToggle appearnceToggles[] = {AppearanceToggle{.id = 0,
+                                                                      .label = "Light",
+                                                                      .color = this->lightThemeColor,
+                                                                      .action =
+                                                                          [this]()
+                                                                      {
+                                                                          this->app_settings->_active_theme_id = 0;
+                                                                          ImGui::StyleColorsLight();
+                                                                      }},
+                                                     AppearanceToggle{.id = 1,
+                                                                      .label = "Dark",
+                                                                      .color = this->darkThemeColor,
+                                                                      .action =
+                                                                          [this]()
+                                                                      {
+                                                                          this->app_settings->_active_theme_id = 1;
+                                                                          ImGui::StyleColorsDark();
+                                                                      }},
+                                                     AppearanceToggle{.id = 2,
+                                                                      .label = "Classic",
+                                                                      .color = this->classicThemeColor,
+                                                                      .action = [this]()
+                                                                      {
+                                                                          this->app_settings->_active_theme_id = 2;
+                                                                          ImGui::StyleColorsClassic();
+                                                                      }}};
+        if (BeginCombo("Theme", appearnceToggles[this->app_settings->_active_theme_id].label,
+                       ImGuiComboFlags_NoArrowButton))
+        {
+            for (size_t i = 0; i < std::size(appearnceToggles); i++)
+            {
+                const AppearanceToggle &at = appearnceToggles[i];
+                const bool isSelected = at.id == this->app_settings->_active_theme_id;
+                if (Selectable(at.label, isSelected))
+                    at.action();
+                if (isSelected)
+                    SetItemDefaultFocus();
+            }
+            EndCombo();
+        }
+    }
+
+    void SettingsViewUi::render_appearance_fonts()
+    {
+        using namespace ImGui;
+        boost::container::small_vector<AppearanceToggle, 8> toggles;
+        ImFontAtlas *fontAtlas = GetIO().Fonts;
+        for (size_t i = 0; i < fontAtlas->Fonts.size(); i++)
+        {
+            ImFont *font = fontAtlas->Fonts[(int)i];
+            toggles.emplace_back(avUi::SettingsViewUi::AppearanceToggle{.id = (uint8_t)i,
+                                                                        .label = font->ConfigData->Name,
+                                                                        .color = NULL,
+                                                                        .action =
+                                                                            [this, i, font]()
+                                                                        {
+                                                                            this->app_settings->_active_font_id = i;
+                                                                            GetIO().FontDefault = font;
+                                                                        }
+
+            });
+        }
+        if (BeginCombo("Font", toggles[this->app_settings->_active_font_id].label, ImGuiComboFlags_NoArrowButton))
+        {
+            for (size_t i = 0; i < std::size(toggles); i++)
+            {
+                const AppearanceToggle &at = toggles[i];
+                const bool isSelected = at.id == this->app_settings->_active_font_id;
+                if (Selectable(at.label, isSelected))
+                    at.action();
+                if (isSelected)
+                    SetItemDefaultFocus();
+            }
+            EndCombo();
+        }
+    }
+
     void SettingsViewUi::render_network()
     {
+        using namespace ImGui;
+        TextDisabled("nothing here yet...");
     }
     void SettingsViewUi::render_env_block(avR::AvEnvironment &env, size_t index, size_t &erase_env)
     {

@@ -23,6 +23,21 @@ namespace avUi
         ~SettingsViewUi();
 
     private:
+        struct Toggle
+        {
+            const char *label;
+            const char *desc;
+            bool *val;
+        };
+
+        struct AppearanceToggle
+        {
+            const uint8_t id;
+            const char *label;
+            const ImU32 color;
+            std::function<void()> action;
+        };
+
         std::shared_ptr<avR::AvAppSettings> app_settings;
         std::unique_ptr<avS::AvEnvironmentStorage> env_storage;
         avR::AvInterViewSharedState *shared_state;
@@ -42,6 +57,8 @@ namespace avUi
         void render_environments();
         void render_shortcuts();
         void render_appearance();
+        void render_appearance_theme();
+        void render_appearance_fonts();
         void render_network();
 
         void render_env_block(avR::AvEnvironment &env, size_t index, size_t &erase_env);
