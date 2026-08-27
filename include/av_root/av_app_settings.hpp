@@ -5,8 +5,8 @@ namespace avR
     class AvAppSettings
     {
     public:
-        bool save_responses = true;
-        bool restore_last_req = false;
+        bool _save_responses = true;
+        bool _restore_last_req = false;
         bool _auto_save = false;
 
         uint8_t _active_theme_id = 0;

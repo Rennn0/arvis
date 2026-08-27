@@ -10,19 +10,22 @@ namespace avUi
     constexpr float kVarIndent = 12.f;
     constexpr float kWindowW = 840.f;
     constexpr float kWindowH = 560.f;
-    constexpr size_t kNoIndex = static_cast<size_t>(-1); // "nothing to erase" sentinel
+    constexpr size_t kNoIndex = static_cast<size_t>(-1);
 
-    const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f); // #15171b
-    const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);   // #52565e
-    const ImVec4 kNavActiveText = ImVec4(0.843f, 0.851f, 0.867f, 1.f); // #d7d9dd
+    const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f);
+    const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);
+    const ImVec4 kNavActiveText = ImVec4(0.843f, 0.851f, 0.867f, 1.f);
 
+    // the icon travels with the label: these strings are both the nav row and the content heading
     const char *const SettingsViewUi::section_labels[] = {
-        "General", "Environment", "Shortcuts", "Appearance", "Network",
+        ICON_FA_SLIDERS "  General",    ICON_FA_LAYER_GROUP "  Environment", ICON_FA_KEYBOARD "  Shortcuts",
+        ICON_FA_PALETTE "  Appearance", ICON_FA_NETWORK_WIRED "  Network",
     };
 
     SettingsViewUi::SettingsViewUi(std::string id, avR::AvState *sharedState)
-        : UiComponent(id), app_settings(std::make_shared<avR::AvAppSettings>()),
+        : UiComponent(id), _app_settings(std::make_shared<avR::AvAppSettings>()),
           env_storage(std::make_unique<avS::AvEnvironmentStorage>()),
+          _app_settings_storage(std::make_unique<avS::AvAppSettingsStorage>()),
           shared_state(static_cast<avR::AvInterViewSharedState *>(sharedState)),
           selected_section(static_cast<int>(Section::General))
     {
@@ -32,7 +35,28 @@ namespace avUi
                 s->show_settings_view = !s->show_settings_view;
                 *selected = section;
             });
-        this->shared_state->app_settings = this->app_settings;
+        this->_app_settings_storage->load(this->_app_settings.get());
+        this->shared_state->app_settings = this->_app_settings;
+
+        ImFontAtlas *fontAtlas = ImGui::GetIO().Fonts;
+        for (size_t i = 0; i < fontAtlas->Fonts.size(); i++)
+        {
+            ImFont *font = fontAtlas->Fonts[(int)i];
+            this->_font_settings.emplace_back(
+                avUi::SettingsViewUi::SettingsToggle{.id = (uint8_t)i,
+                                                     .label = font->ConfigData->Name,
+                                                     .color = NULL,
+                                                     .action =
+                                                         [this, i, font]()
+                                                     {
+                                                         this->_app_settings->_active_font_id = i;
+                                                         ImGui::GetIO().FontDefault = font;
+                                                     }
+
+                });
+        }
+
+        this->apply_settings(*this->_app_settings);
     }
 
     SettingsViewUi::~SettingsViewUi()
@@ -64,12 +88,28 @@ namespace avUi
         }
         End();
     }
+
+    void SettingsViewUi::update()
+    {
+        if (!this->_run_update)
+            return;
+
+        this->_app_settings_storage->save(this->_app_settings.get());
+        _run_update = false;
+    }
+
+    void SettingsViewUi::apply_settings(const avR::AvAppSettings &settings)
+    {
+        this->_theme_settings[settings._active_theme_id].action();
+        this->_font_settings[settings._active_font_id].action();
+    }
+
     void SettingsViewUi::render_nav()
     {
         using namespace ImGui;
         if (BeginChild("##nav", ImVec2(kNavWidth, 0.f)))
         {
-            TextDisabled("SETTINGS");
+            TextDisabled(ICON_FA_GEAR "  SETTINGS");
             Spacing();
             avR::UiScopedStyle navS;
             navS.color(ImGuiCol_Header, kNavSelectedBg)
@@ -129,15 +169,18 @@ namespace avUi
 
         const Toggle toggles[] = {
             {"save responses to disk", "write every response body under responses.dev/",
-             &this->app_settings->save_responses},
+             &this->_app_settings->_save_responses},
             {"restore last request", "reopen the request that was selected on exit",
-             &this->app_settings->restore_last_req},
-            {"auto save", "automaticaly persist changes (url,param, header ...)", &this->app_settings->_auto_save}};
+             &this->_app_settings->_restore_last_req},
+            {"auto save", "automaticaly persist changes (url,param, header ...)", &this->_app_settings->_auto_save}};
 
         for (const Toggle &t : toggles)
         {
             avR::UiScopedId usid(this);
-            Checkbox(t.label, t.val);
+            if (Checkbox(t.label, t.val))
+            {
+                this->_run_update = true;
+            }
             SameLine();
             TextDisabled("%s", t.desc);
         }
@@ -148,7 +191,7 @@ namespace avUi
         if (!this->envs_loaded)
             this->reload_environments();
 
-        if (Button("+ env"))
+        if (Button(ICON_FA_PLUS "  env"))
         {
             avR::AvEnvironment newEnv;
             newEnv.name = "new env";
@@ -163,7 +206,7 @@ namespace avUi
         Spacing();
         if (this->environments.empty())
         {
-            TextDisabled("no envs yet");
+            TextDisabled(ICON_FA_INBOX "  no envs yet");
             return;
         }
 
@@ -177,12 +220,12 @@ namespace avUi
             this->environments.erase(this->environments.begin() + static_cast<long>(erase_env));
 
         Spacing();
-        TextDisabled("reference variables with {{name}} - params, headers and cookies");
+        TextDisabled(ICON_FA_CIRCLE_INFO "  reference variables with {{name}} - params, headers and cookies");
     }
     void SettingsViewUi::render_shortcuts()
     {
         using namespace ImGui;
-        TextDisabled("nothing here yet...");
+        TextDisabled(ICON_FA_WRENCH "  nothing here yet...");
     }
 
     void SettingsViewUi::render_appearance()
@@ -194,41 +237,19 @@ namespace avUi
     void SettingsViewUi::render_appearance_theme()
     {
         using namespace ImGui;
-        const AppearanceToggle appearnceToggles[] = {AppearanceToggle{.id = 0,
-                                                                      .label = "Light",
-                                                                      .color = this->lightThemeColor,
-                                                                      .action =
-                                                                          [this]()
-                                                                      {
-                                                                          this->app_settings->_active_theme_id = 0;
-                                                                          ImGui::StyleColorsLight();
-                                                                      }},
-                                                     AppearanceToggle{.id = 1,
-                                                                      .label = "Dark",
-                                                                      .color = this->darkThemeColor,
-                                                                      .action =
-                                                                          [this]()
-                                                                      {
-                                                                          this->app_settings->_active_theme_id = 1;
-                                                                          ImGui::StyleColorsDark();
-                                                                      }},
-                                                     AppearanceToggle{.id = 2,
-                                                                      .label = "Classic",
-                                                                      .color = this->classicThemeColor,
-                                                                      .action = [this]()
-                                                                      {
-                                                                          this->app_settings->_active_theme_id = 2;
-                                                                          ImGui::StyleColorsClassic();
-                                                                      }}};
-        if (BeginCombo("Theme", appearnceToggles[this->app_settings->_active_theme_id].label,
+
+        if (BeginCombo("Theme", _theme_settings[this->_app_settings->_active_theme_id].label,
                        ImGuiComboFlags_NoArrowButton))
         {
-            for (size_t i = 0; i < std::size(appearnceToggles); i++)
+            for (size_t i = 0; i < std::size(_theme_settings); i++)
             {
-                const AppearanceToggle &at = appearnceToggles[i];
-                const bool isSelected = at.id == this->app_settings->_active_theme_id;
+                const SettingsToggle &at = _theme_settings[i];
+                const bool isSelected = at.id == this->_app_settings->_active_theme_id;
                 if (Selectable(at.label, isSelected))
+                {
                     at.action();
+                    _run_update = true;
+                }
                 if (isSelected)
                     SetItemDefaultFocus();
             }
@@ -239,31 +260,19 @@ namespace avUi
     void SettingsViewUi::render_appearance_fonts()
     {
         using namespace ImGui;
-        boost::container::small_vector<AppearanceToggle, 8> toggles;
-        ImFontAtlas *fontAtlas = GetIO().Fonts;
-        for (size_t i = 0; i < fontAtlas->Fonts.size(); i++)
-        {
-            ImFont *font = fontAtlas->Fonts[(int)i];
-            toggles.emplace_back(avUi::SettingsViewUi::AppearanceToggle{.id = (uint8_t)i,
-                                                                        .label = font->ConfigData->Name,
-                                                                        .color = NULL,
-                                                                        .action =
-                                                                            [this, i, font]()
-                                                                        {
-                                                                            this->app_settings->_active_font_id = i;
-                                                                            GetIO().FontDefault = font;
-                                                                        }
 
-            });
-        }
-        if (BeginCombo("Font", toggles[this->app_settings->_active_font_id].label, ImGuiComboFlags_NoArrowButton))
+        if (BeginCombo("Font", this->_font_settings[this->_app_settings->_active_font_id].label,
+                       ImGuiComboFlags_NoArrowButton))
         {
-            for (size_t i = 0; i < std::size(toggles); i++)
+            for (size_t i = 0; i < std::size(this->_font_settings); i++)
             {
-                const AppearanceToggle &at = toggles[i];
-                const bool isSelected = at.id == this->app_settings->_active_font_id;
+                const SettingsToggle &at = this->_font_settings[i];
+                const bool isSelected = at.id == this->_app_settings->_active_font_id;
                 if (Selectable(at.label, isSelected))
+                {
                     at.action();
+                    this->_run_update = true;
+                }
                 if (isSelected)
                     SetItemDefaultFocus();
             }
@@ -274,7 +283,7 @@ namespace avUi
     void SettingsViewUi::render_network()
     {
         using namespace ImGui;
-        TextDisabled("nothing here yet...");
+        TextDisabled(ICON_FA_WRENCH "  nothing here yet...");
     }
     void SettingsViewUi::render_env_block(avR::AvEnvironment &env, size_t index, size_t &erase_env)
     {
@@ -307,14 +316,14 @@ namespace avUi
 
         SameLine();
         BeginDisabled(active);
-        if (Button("set active"))
+        if (Button(ICON_FA_CIRCLE_CHECK "  set active"))
             this->set_active_env(env);
         EndDisabled();
 
         SameLine();
         if (this->env_pending_del == env.id && env.id != 0)
         {
-            if (Button("y"))
+            if (Button(ICON_FA_CHECK "##confirm_del"))
             {
                 this->env_storage->del(env.id);
                 if (active)
@@ -323,17 +332,22 @@ namespace avUi
                 this->env_pending_del = 0;
             }
 
+            SetItemTooltip("confirm delete");
             SameLine();
-            if (Button("n"))
+            if (Button(ICON_FA_XMARK "##cancel_del"))
             {
                 this->env_pending_del = 0;
             }
+            SetItemTooltip("keep env");
         }
-        else if (Button("x"))
+        else
         {
-            this->env_pending_del = env.id;
+            if (Button(ICON_FA_TRASH))
+                this->env_pending_del = env.id;
+            // scoped to the trash button: the confirm branch sets its own tooltips, and two
+            // SetItemTooltip calls against one item would fight over the same tooltip window.
+            SetItemTooltip("delete env");
         }
-        SetItemTooltip("delete env");
 
         Indent(kVarIndent);
         size_t eraseVar = kNoIndex;
@@ -373,8 +387,9 @@ namespace avUi
                     }
 
                     TableSetColumnIndex(2);
-                    if (Button("x"))
+                    if (Button(ICON_FA_XMARK))
                         eraseVar = v;
+                    SetItemTooltip("remove variable");
                     SameLine();
                     Spacing();
                 }
@@ -383,7 +398,7 @@ namespace avUi
         }
         else
         {
-            TextDisabled("no variables");
+            TextDisabled(ICON_FA_INBOX "  no variables");
         }
 
         if (eraseVar != kNoIndex)
@@ -394,13 +409,14 @@ namespace avUi
                 this->set_active_env(env);
         }
 
-        if (Button("+"))
+        if (Button(ICON_FA_PLUS))
         {
             avR::AvEnvironmentVariable newVar;
             newVar.EnvId = env.id;
             this->env_storage->upsert_var(newVar);
             env.vars.push_back(std::move(newVar));
         }
+        SetItemTooltip("add variable");
 
         Unindent(kVarIndent);
     }

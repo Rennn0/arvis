@@ -1,4 +1,5 @@
 #include <av_ui/json_tree_view.hpp>
+#include <av_ui/icons_font_awesome7.hpp>
 
 #include <cctype>
 #include <cfloat>
@@ -379,20 +380,20 @@ namespace avUi
             return;
         const Row &row = this->rows[index];
         const nlohmann::json *val = row.value;
-        if (MenuItem("copy key"))
+        if (MenuItem(ICON_FA_KEY "  copy key"))
             SetClipboardText(row.label.c_str());
-        if (MenuItem("copy value"))
+        if (MenuItem(ICON_FA_COPY "  copy value"))
             SetClipboardText((val->is_string() ? val->get<std::string>() : val->dump(2)).c_str());
-        if (MenuItem("copy key + value"))
+        if (MenuItem(ICON_FA_TABLE "  copy key + value"))
             SetClipboardText((row.label + ": " + (val->is_string() ? val->get<std::string>() : val->dump(2))).c_str());
-        if (MenuItem("copy path"))
+        if (MenuItem(ICON_FA_ROUTE "  copy path"))
             SetClipboardText(this->path_of(index).c_str());
         if (row.container)
         {
             Separator();
-            if (MenuItem("expand subtree"))
+            if (MenuItem(ICON_FA_ANGLES_DOWN "  expand subtree"))
                 this->set_subtree_open(index, true);
-            if (MenuItem("collapse subtree"))
+            if (MenuItem(ICON_FA_ANGLES_UP "  collapse subtree"))
                 this->set_subtree_open(index, false);
         }
         EndPopup();
@@ -487,7 +488,7 @@ namespace avUi
 
     void JsonTreeView::render_pretty()
     {
-        if (ImGui::Button("copy all"))
+        if (ImGui::Button(ICON_FA_COPY "  copy all"))
             ImGui::SetClipboardText(this->pretty.c_str());
 
         // read-only multiline input so the user can still select and copy arbitrary
@@ -499,17 +500,17 @@ namespace avUi
     {
         if (!this->valid || this->rows.empty())
         {
-            ImGui::TextDisabled("no json to show");
+            ImGui::TextDisabled(ICON_FA_BAN "  no json to show");
             return;
         }
 
         // ---- toolbar -----------------------------------------------------------------
         ImGui::SetNextItemWidth(240.f);
-        if (ImGui::InputTextWithHint("##json_search", "search keys / values", &this->filter))
+        if (ImGui::InputTextWithHint("##json_search", ICON_FA_MAGNIFYING_GLASS "  search keys / values", &this->filter))
             this->apply_filter();
 
         ImGui::SameLine();
-        if (ImGui::ArrowButton("##expand_all", ImGuiDir_Down))
+        if (ImGui::Button(ICON_FA_ANGLES_DOWN "##expand_all"))
         {
             std::fill(this->open.begin(), this->open.end(), static_cast<std::uint8_t>(1));
             this->visible_dirty = true;
@@ -517,7 +518,7 @@ namespace avUi
         ImGui::SetItemTooltip("expand all");
 
         ImGui::SameLine();
-        if (ImGui::ArrowButton("##collapse_all", ImGuiDir_Up))
+        if (ImGui::Button(ICON_FA_ANGLES_UP "##collapse_all"))
         {
             std::fill(this->open.begin(), this->open.end(), static_cast<std::uint8_t>(0));
             this->visible_dirty = true;
@@ -525,11 +526,11 @@ namespace avUi
         ImGui::SetItemTooltip("collapse all (alt+click a node folds just that branch)");
 
         ImGui::SameLine();
-        if (ImGui::Button("copy json"))
+        if (ImGui::Button(ICON_FA_COPY "  copy json"))
             ImGui::SetClipboardText(this->pretty.c_str());
 
         ImGui::SameLine();
-        ImGui::Checkbox("map", &this->show_minimap);
+        ImGui::Checkbox(ICON_FA_MAP "  map", &this->show_minimap);
         ImGui::SetItemTooltip("document preview on the right edge");
 
         if (!this->filter.empty())

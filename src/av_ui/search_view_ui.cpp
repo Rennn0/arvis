@@ -1,4 +1,5 @@
 #include <av_ui/search_view_ui.hpp>
+#include <av_ui/icons_font_awesome7.hpp>
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
 #include <cfloat>
@@ -120,8 +121,9 @@ namespace avUi
             }
 
             ImGui::SetNextItemWidth(-FLT_MIN);
-            const bool committed = ImGui::InputTextWithHint("##query", "search requests...", this->query, sizeof(query),
-                                                            ImGuiInputTextFlags_EnterReturnsTrue);
+            const bool committed =
+                ImGui::InputTextWithHint("##query", ICON_FA_MAGNIFYING_GLASS "  search requests...", this->query,
+                                         sizeof(query), ImGuiInputTextFlags_EnterReturnsTrue);
 
             if (ImGui::IsItemEdited())
             {
@@ -158,7 +160,7 @@ namespace avUi
             // ---- results ---------------------------------------------------------------
             BeginChild("##results", ImVec2(0.f, kListHeight));
             if (this->hits.empty())
-                TextDisabled("no matches");
+                TextDisabled(ICON_FA_BAN "  no matches");
 
             for (size_t i = 0; i < this->hits.size(); i++)
             {

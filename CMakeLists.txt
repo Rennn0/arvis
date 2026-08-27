@@ -129,6 +129,7 @@ add_executable(arvis
     src/av_s/av_environment_storage.cpp
     src/av_root/ui_scoped_id.cpp
     src/av_ui/tab_bar_ui.cpp
+    src/av_s/av_app_settings_storage.cpp
 )
 
 target_include_directories(arvis PRIVATE
