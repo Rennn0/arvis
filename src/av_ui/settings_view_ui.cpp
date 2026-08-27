@@ -43,15 +43,15 @@ namespace avUi
         {
             ImFont *font = fontAtlas->Fonts[(int)i];
             this->_font_settings.emplace_back(
-                avUi::SettingsViewUi::AppearanceToggle{.id = (uint8_t)i,
-                                                       .label = font->ConfigData->Name,
-                                                       .color = NULL,
-                                                       .action =
-                                                           [this, i, font]()
-                                                       {
-                                                           this->_app_settings->_active_font_id = i;
-                                                           ImGui::GetIO().FontDefault = font;
-                                                       }
+                avUi::SettingsViewUi::SettingsToggle{.id = (uint8_t)i,
+                                                     .label = font->ConfigData->Name,
+                                                     .color = NULL,
+                                                     .action =
+                                                         [this, i, font]()
+                                                     {
+                                                         this->_app_settings->_active_font_id = i;
+                                                         ImGui::GetIO().FontDefault = font;
+                                                     }
 
                 });
         }
@@ -243,7 +243,7 @@ namespace avUi
         {
             for (size_t i = 0; i < std::size(_theme_settings); i++)
             {
-                const AppearanceToggle &at = _theme_settings[i];
+                const SettingsToggle &at = _theme_settings[i];
                 const bool isSelected = at.id == this->_app_settings->_active_theme_id;
                 if (Selectable(at.label, isSelected))
                 {
@@ -266,7 +266,7 @@ namespace avUi
         {
             for (size_t i = 0; i < std::size(this->_font_settings); i++)
             {
-                const AppearanceToggle &at = this->_font_settings[i];
+                const SettingsToggle &at = this->_font_settings[i];
                 const bool isSelected = at.id == this->_app_settings->_active_font_id;
                 if (Selectable(at.label, isSelected))
                 {

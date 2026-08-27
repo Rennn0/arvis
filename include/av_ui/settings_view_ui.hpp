@@ -33,7 +33,7 @@ namespace avUi
             bool *val;
         };
 
-        struct AppearanceToggle
+        struct SettingsToggle
         {
             const uint8_t id;
             const char *label;
@@ -74,33 +74,33 @@ namespace avUi
         void set_active_env(const avR::AvEnvironment &env);
         bool is_active_env(const avR::AvEnvironment &env) const;
 
-        const AppearanceToggle _theme_settings[3] = {AppearanceToggle{.id = 0,
-                                                                      .label = ICON_FA_SUN " Light",
-                                                                      .color = this->lightThemeColor,
-                                                                      .action =
-                                                                          [this]()
-                                                                      {
-                                                                          this->_app_settings->_active_theme_id = 0;
-                                                                          ImGui::StyleColorsLight();
-                                                                      }},
-                                                     AppearanceToggle{.id = 1,
-                                                                      .label = ICON_FA_MOON " Dark",
-                                                                      .color = this->darkThemeColor,
-                                                                      .action =
-                                                                          [this]()
-                                                                      {
-                                                                          this->_app_settings->_active_theme_id = 1;
-                                                                          ImGui::StyleColorsDark();
-                                                                      }},
-                                                     AppearanceToggle{.id = 2,
-                                                                      .label = ICON_FA_CIRCLE_HALF_STROKE " Classic",
-                                                                      .color = this->classicThemeColor,
-                                                                      .action = [this]()
-                                                                      {
-                                                                          this->_app_settings->_active_theme_id = 2;
-                                                                          ImGui::StyleColorsClassic();
-                                                                      }}};
+        const SettingsToggle _theme_settings[3] = {SettingsToggle{.id = 0,
+                                                                  .label = ICON_FA_SUN " Light",
+                                                                  .color = this->lightThemeColor,
+                                                                  .action =
+                                                                      [this]()
+                                                                  {
+                                                                      this->_app_settings->_active_theme_id = 0;
+                                                                      ImGui::StyleColorsLight();
+                                                                  }},
+                                                   SettingsToggle{.id = 1,
+                                                                  .label = ICON_FA_MOON " Dark",
+                                                                  .color = this->darkThemeColor,
+                                                                  .action =
+                                                                      [this]()
+                                                                  {
+                                                                      this->_app_settings->_active_theme_id = 1;
+                                                                      ImGui::StyleColorsDark();
+                                                                  }},
+                                                   SettingsToggle{.id = 2,
+                                                                  .label = ICON_FA_CIRCLE_HALF_STROKE " Classic",
+                                                                  .color = this->classicThemeColor,
+                                                                  .action = [this]()
+                                                                  {
+                                                                      this->_app_settings->_active_theme_id = 2;
+                                                                      ImGui::StyleColorsClassic();
+                                                                  }}};
 
-        boost::container::small_vector<AppearanceToggle, 8> _font_settings;
+        boost::container::small_vector<SettingsToggle, 8> _font_settings;
     };
 } // namespace avUi
