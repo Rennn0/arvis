@@ -1,6 +1,7 @@
 #include <av_ui/request_list_view_ui.hpp>
 #include <av_ui/settings_view_ui.hpp>
 #include <av_ui/logo_icon.hpp>
+#include <av_ui/icons_font_awesome7.hpp>
 #include <av_s/av_environment_storage.hpp>
 #include <ranges>
 #include <algorithm>
@@ -69,8 +70,8 @@ namespace avUi
 
         this->tabs = std::make_unique<avUi::TabBarUi>("tabs");
         this->_tab_badge_enabled = true;
-        this->tabs->addTab("history", &this->_tab_badge_enabled, &this->_tab_history_counter_badge);
-        this->tabs->addTab("saved", &this->_tab_badge_enabled, &this->_tab_saved_counter_badge);
+        this->tabs->addTab(ICON_FA_CLOCK "  history", &this->_tab_badge_enabled, &this->_tab_history_counter_badge);
+        this->tabs->addTab(ICON_FA_FLOPPY_DISK "  saved", &this->_tab_badge_enabled, &this->_tab_saved_counter_badge);
     }
 
     RequstListViewUi::~RequstListViewUi()
@@ -128,7 +129,7 @@ namespace avUi
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + marginLeft);
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("env:");
+        ImGui::TextDisabled(ICON_FA_LAYER_GROUP "  env:");
         ImGui::SameLine();
         const std::string &envName = this->request_list_state->env->name;
         if (envName.empty())
@@ -136,20 +137,27 @@ namespace avUi
         else
             ImGui::TextColored(this->environment_color, "%s", envName.c_str());
 
-        const char *addLabel = "+";
+        const char *addLabel = ICON_FA_CIRCLE_PLUS;
         const float addLabelButtonWidth = ImGui::CalcTextSize(addLabel).x + style.FramePadding.x * 3.f;
+        const char *settingsLabel = ICON_FA_GEAR;
+        const float settingsLabelWidth = ImGui::CalcTextSize(addLabel).x + style.FramePadding.x * 3.f;
+        const float marginRight = addLabelButtonWidth + settingsLabelWidth;
         ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - addLabelButtonWidth);
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - marginRight);
         if (ImGui::Button(addLabel))
-        {
             this->new_request();
-        }
         ImGui::SetItemTooltip("add request");
+        
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - marginRight + addLabelButtonWidth);
+        if (ImGui::Button(settingsLabel))
+            this->shared_state->on_show_settings.value()(static_cast<size_t>(avUi::Section::General));
+        ImGui::SetItemTooltip("open settings");
 
         ImGui::Dummy(ImVec2(0.f, marginTop));
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + marginLeft);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - marginLeft);
-        ImGui::InputTextWithHint("##filter", "filter requsts", &this->filter_text);
+        ImGui::InputTextWithHint("##filter", ICON_FA_MAGNIFYING_GLASS "  filter requsts", &this->filter_text);
         if (ImGui::IsItemDeactivatedAfterEdit())
         {
             this->log_info(this->filter_text);
@@ -177,9 +185,9 @@ namespace avUi
         const int savedCount = this->request_list_state->requests.size();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + savedTxtOffset);
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("%d saved", savedCount);
+        ImGui::Text(ICON_FA_FLOPPY_DISK "  %d saved", savedCount);
 
-        const char *envLabel = "env";
+        const char *envLabel = ICON_FA_LAYER_GROUP "  env";
         const float envLabelButtonWidth = ImGui::CalcTextSize(envLabel).x + style.FramePadding.x * 3.f;
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - envLabelButtonWidth);
@@ -239,7 +247,7 @@ namespace avUi
     {
         ImGui::Dummy(ImVec2(0.0f, 5.0f));
         ImGui::Indent(12.f);
-        ImGui::TextDisabled("Nothing saved");
+        ImGui::TextDisabled(ICON_FA_INBOX "  Nothing saved");
         ImGui::Unindent(12.f);
     }
 
@@ -289,7 +297,7 @@ namespace avUi
         if (ImGui::BeginDragDropSource())
         {
             ImGui::SetDragDropPayload("REQ", &request, sizeof(request));
-            ImGui::Text("dragging: %s", request->display_name().c_str());
+            ImGui::Text(ICON_FA_GRIP_VERTICAL "  %s", request->display_name().c_str());
             ImGui::EndDragDropSource();
         }
 
@@ -321,7 +329,7 @@ namespace avUi
                 request->title.emplace(request->display_name());
             ImGui::TextDisabled("%s", ("last modified: " + this->root.timestamp_to_date(request->timestamp)).c_str());
             ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled("title");
+            ImGui::TextDisabled(ICON_FA_PEN "  title");
             ImGui::SameLine();
             if (ImGui::InputText("##title", &request->title.value(), ImGuiInputTextFlags_EnterReturnsTrue))
             {
@@ -329,7 +337,7 @@ namespace avUi
                 ImGui::CloseCurrentPopup();
             }
             ImGui::Spacing();
-            if (ImGui::Button("delete"))
+            if (ImGui::Button(ICON_FA_TRASH "  delete"))
             {
                 this->pending_delete_req = request->id;
                 // this->request_storage->del(request->id);

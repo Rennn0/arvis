@@ -4,6 +4,7 @@
 #include <av_root/av_inter_view_shared_state.hpp>
 #include <av_s/av_environment_storage.hpp>
 #include <av_s/av_app_settings_storage.hpp>
+#include <av_ui/icons_font_awesome7.hpp>
 #include <boost/container/small_vector.hpp>
 
 namespace avUi
@@ -74,7 +75,7 @@ namespace avUi
         bool is_active_env(const avR::AvEnvironment &env) const;
 
         const AppearanceToggle _theme_settings[3] = {AppearanceToggle{.id = 0,
-                                                                      .label = "Light",
+                                                                      .label = ICON_FA_SUN " Light",
                                                                       .color = this->lightThemeColor,
                                                                       .action =
                                                                           [this]()
@@ -83,7 +84,7 @@ namespace avUi
                                                                           ImGui::StyleColorsLight();
                                                                       }},
                                                      AppearanceToggle{.id = 1,
-                                                                      .label = "Dark",
+                                                                      .label = ICON_FA_MOON " Dark",
                                                                       .color = this->darkThemeColor,
                                                                       .action =
                                                                           [this]()
@@ -92,7 +93,7 @@ namespace avUi
                                                                           ImGui::StyleColorsDark();
                                                                       }},
                                                      AppearanceToggle{.id = 2,
-                                                                      .label = "Classic",
+                                                                      .label = ICON_FA_CIRCLE_HALF_STROKE " Classic",
                                                                       .color = this->classicThemeColor,
                                                                       .action = [this]()
                                                                       {

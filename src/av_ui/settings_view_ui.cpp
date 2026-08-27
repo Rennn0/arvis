@@ -12,12 +12,14 @@ namespace avUi
     constexpr float kWindowH = 560.f;
     constexpr size_t kNoIndex = static_cast<size_t>(-1);
 
-    const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f); 
-    const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);   
-    const ImVec4 kNavActiveText = ImVec4(0.843f, 0.851f, 0.867f, 1.f); 
+    const ImVec4 kNavSelectedBg = ImVec4(0.082f, 0.090f, 0.106f, 1.f);
+    const ImVec4 kNavIdleText = ImVec4(0.322f, 0.337f, 0.369f, 1.f);
+    const ImVec4 kNavActiveText = ImVec4(0.843f, 0.851f, 0.867f, 1.f);
 
+    // the icon travels with the label: these strings are both the nav row and the content heading
     const char *const SettingsViewUi::section_labels[] = {
-        "General", "Environment", "Shortcuts", "Appearance", "Network",
+        ICON_FA_SLIDERS "  General",    ICON_FA_LAYER_GROUP "  Environment", ICON_FA_KEYBOARD "  Shortcuts",
+        ICON_FA_PALETTE "  Appearance", ICON_FA_NETWORK_WIRED "  Network",
     };
 
     SettingsViewUi::SettingsViewUi(std::string id, avR::AvState *sharedState)
@@ -107,7 +109,7 @@ namespace avUi
         using namespace ImGui;
         if (BeginChild("##nav", ImVec2(kNavWidth, 0.f)))
         {
-            TextDisabled("SETTINGS");
+            TextDisabled(ICON_FA_GEAR "  SETTINGS");
             Spacing();
             avR::UiScopedStyle navS;
             navS.color(ImGuiCol_Header, kNavSelectedBg)
@@ -189,7 +191,7 @@ namespace avUi
         if (!this->envs_loaded)
             this->reload_environments();
 
-        if (Button("+ env"))
+        if (Button(ICON_FA_PLUS "  env"))
         {
             avR::AvEnvironment newEnv;
             newEnv.name = "new env";
@@ -204,7 +206,7 @@ namespace avUi
         Spacing();
         if (this->environments.empty())
         {
-            TextDisabled("no envs yet");
+            TextDisabled(ICON_FA_INBOX "  no envs yet");
             return;
         }
 
@@ -218,12 +220,12 @@ namespace avUi
             this->environments.erase(this->environments.begin() + static_cast<long>(erase_env));
 
         Spacing();
-        TextDisabled("reference variables with {{name}} - params, headers and cookies");
+        TextDisabled(ICON_FA_CIRCLE_INFO "  reference variables with {{name}} - params, headers and cookies");
     }
     void SettingsViewUi::render_shortcuts()
     {
         using namespace ImGui;
-        TextDisabled("nothing here yet...");
+        TextDisabled(ICON_FA_WRENCH "  nothing here yet...");
     }
 
     void SettingsViewUi::render_appearance()
@@ -281,7 +283,7 @@ namespace avUi
     void SettingsViewUi::render_network()
     {
         using namespace ImGui;
-        TextDisabled("nothing here yet...");
+        TextDisabled(ICON_FA_WRENCH "  nothing here yet...");
     }
     void SettingsViewUi::render_env_block(avR::AvEnvironment &env, size_t index, size_t &erase_env)
     {
@@ -314,14 +316,14 @@ namespace avUi
 
         SameLine();
         BeginDisabled(active);
-        if (Button("set active"))
+        if (Button(ICON_FA_CIRCLE_CHECK "  set active"))
             this->set_active_env(env);
         EndDisabled();
 
         SameLine();
         if (this->env_pending_del == env.id && env.id != 0)
         {
-            if (Button("y"))
+            if (Button(ICON_FA_CHECK "##confirm_del"))
             {
                 this->env_storage->del(env.id);
                 if (active)
@@ -330,17 +332,22 @@ namespace avUi
                 this->env_pending_del = 0;
             }
 
+            SetItemTooltip("confirm delete");
             SameLine();
-            if (Button("n"))
+            if (Button(ICON_FA_XMARK "##cancel_del"))
             {
                 this->env_pending_del = 0;
             }
+            SetItemTooltip("keep env");
         }
-        else if (Button("x"))
+        else
         {
-            this->env_pending_del = env.id;
+            if (Button(ICON_FA_TRASH))
+                this->env_pending_del = env.id;
+            // scoped to the trash button: the confirm branch sets its own tooltips, and two
+            // SetItemTooltip calls against one item would fight over the same tooltip window.
+            SetItemTooltip("delete env");
         }
-        SetItemTooltip("delete env");
 
         Indent(kVarIndent);
         size_t eraseVar = kNoIndex;
@@ -380,8 +387,9 @@ namespace avUi
                     }
 
                     TableSetColumnIndex(2);
-                    if (Button("x"))
+                    if (Button(ICON_FA_XMARK))
                         eraseVar = v;
+                    SetItemTooltip("remove variable");
                     SameLine();
                     Spacing();
                 }
@@ -390,7 +398,7 @@ namespace avUi
         }
         else
         {
-            TextDisabled("no variables");
+            TextDisabled(ICON_FA_INBOX "  no variables");
         }
 
         if (eraseVar != kNoIndex)
@@ -401,13 +409,14 @@ namespace avUi
                 this->set_active_env(env);
         }
 
-        if (Button("+"))
+        if (Button(ICON_FA_PLUS))
         {
             avR::AvEnvironmentVariable newVar;
             newVar.EnvId = env.id;
             this->env_storage->upsert_var(newVar);
             env.vars.push_back(std::move(newVar));
         }
+        SetItemTooltip("add variable");
 
         Unindent(kVarIndent);
     }

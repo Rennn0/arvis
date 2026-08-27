@@ -4,9 +4,11 @@
 #include <av_ui/search_view_ui.hpp>
 #include <av_ui/settings_view_ui.hpp>
 #include <av_root/av_inter_view_shared_state.hpp>
+#include <av_ui/icons_font_awesome7.hpp>
 #include "fonts/cousine_regular.h"
 #include "fonts/roboto_medium.h"
 #include "fonts/noto_sans_georgian.h"
+#include "fonts/fa_solid_900.h"
 
 namespace avUi
 {
@@ -40,8 +42,18 @@ namespace avUi
             0,
         };
 
-        // add one font plus its Georgian merge at the same pixel size. MergeMode folds the second
-        // face into the font added immediately before it, so the pair must stay adjacent.
+        // Font Awesome 7 Free (Solid) is merged the same way so ICON_FA_* literals draw inline with
+        // text and inherit ImGuiCol_Text. ImWchar is 16-bit here (nothing defines IMGUI_USE_WCHAR32),
+        // so the range has to stay inside the BMP — ICON_MAX_16_FA is exactly that bound. Same
+        // lifetime rule as georgian_ranges: static, because the atlas only reads it at NewFrame.
+        static const ImWchar icon_ranges[] = {
+            ICON_MIN_FA,
+            ICON_MAX_16_FA,
+            0,
+        };
+
+        // add one font plus its Georgian and icon merges at the same pixel size. MergeMode folds a
+        // face into the font added immediately before it, so all three must stay adjacent.
         const auto add_font = [&io](const char *name, const unsigned char *data, unsigned int size, float px)
         {
             ImFontConfig cfg;
@@ -54,6 +66,16 @@ namespace avUi
             snprintf(geo.Name, IM_ARRAYSIZE(geo.Name), "%s + Georgian", name);
             io.Fonts->AddFontFromMemoryCompressedTTF(Font::NotoSansGeorgian_compressed_data,
                                                      Font::NotoSansGeorgian_compressed_size, px, &geo);
+
+            ImFontConfig icons;
+            icons.MergeMode = true;
+            icons.GlyphRanges = icon_ranges;
+            icons.PixelSnapH = true;              // line art: pixel snapping keeps the edges crisp
+            icons.GlyphMinAdvanceX = px;          // uniform icon width so icon columns line up
+            icons.GlyphOffset = ImVec2(0.f, 1.f); // nudge the glyph box onto the text baseline
+            snprintf(icons.Name, IM_ARRAYSIZE(icons.Name), "%s + FA7", name);
+            io.Fonts->AddFontFromMemoryCompressedTTF(Font::FaSolid_compressed_data, Font::FaSolid_compressed_size, px,
+                                                     &icons);
             return font;
         };
 
@@ -75,7 +97,7 @@ namespace avUi
         this->add_child(std::make_unique<avUi::SearchViewUi>("search_view", shared));
         this->add_child(std::make_unique<avUi::SettingsViewUi>("settings_view", shared));
 
-        shared->shortcutManager.add(UiShortcut{"New request", "ctrl + n",
+        shared->shortcutManager.add(UiShortcut{ICON_FA_FILE_CIRCLE_PLUS "  New request", "ctrl + n",
                                                [shared]()
                                                {
                                                    return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N,
@@ -84,7 +106,7 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_new_request.value()(); }});
 
-        shared->shortcutManager.add(UiShortcut{"Send request", "ctrl + enter",
+        shared->shortcutManager.add(UiShortcut{ICON_FA_PAPER_PLANE "  Send request", "ctrl + enter",
                                                [shared]()
                                                {
                                                    return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Enter,
@@ -93,7 +115,7 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_send_request.value()(); }});
 
-        shared->shortcutManager.add(UiShortcut{"Search", "ctrl + f",
+        shared->shortcutManager.add(UiShortcut{ICON_FA_MAGNIFYING_GLASS "  Search", "ctrl + f",
                                                [shared]()
                                                {
                                                    return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F,
@@ -102,7 +124,7 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_show_search.value()(); }});
 
-        shared->shortcutManager.add(UiShortcut{"Save changes", "ctrl + s",
+        shared->shortcutManager.add(UiShortcut{ICON_FA_FLOPPY_DISK "  Save changes", "ctrl + s",
                                                [shared]()
                                                {
                                                    return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S,
@@ -111,7 +133,7 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_save_changes.value()(); }});
 
-        shared->shortcutManager.add(UiShortcut{"Show shortcuts", "ctrl + /",
+        shared->shortcutManager.add(UiShortcut{ICON_FA_KEYBOARD "  Show shortcuts", "ctrl + /",
                                                [shared]()
                                                {
                                                    return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Slash,
@@ -120,7 +142,7 @@ namespace avUi
                                                },
                                                [shared]() { shared->on_show_shortcuts.value()(); }});
 
-        shared->shortcutManager.add(UiShortcut{"Show style editor", "ctrl + e",
+        shared->shortcutManager.add(UiShortcut{ICON_FA_PALETTE "  Show style editor", "ctrl + e",
                                                [shared]()
                                                {
                                                    return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_E,
@@ -130,7 +152,7 @@ namespace avUi
                                                [shared]() { shared->on_show_style_editor.value()(); }});
 
         shared->shortcutManager.add(UiShortcut{
-            "Show settings", "ctrl + shift + p",
+            ICON_FA_GEAR "  Show settings", "ctrl + shift + p",
             [shared]()
             {
                 return ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_P, ImGuiInputFlags_RouteGlobal) &&

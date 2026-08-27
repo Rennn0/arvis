@@ -1,6 +1,7 @@
 #include <av_ui/detailed_request_view_ui.hpp>
 #include <av_ui/json_tree_view.hpp>
 #include <av_ui/input_autocomplete_ui.hpp>
+#include <av_ui/icons_font_awesome7.hpp>
 #include <string>
 #include <cstdlib>
 #if defined(_WIN32)
@@ -74,10 +75,10 @@ namespace avUi
 
         load_env_vars(this->shared_state->request_list_state->env.get());
 
-        _tabs->addTab("params", &tabParamBadgeEnabled, &tabParamCountBadge);
-        _tabs->addTab("headers", &tabHeaderBadgeEnabled, &tabHeaderCountBadge);
-        _tabs->addTab("cookies", &tabCookieBadgeEnabled, &tabCookieCountBadge);
-        _tabs->addTab("body");
+        _tabs->addTab(ICON_FA_LINK "  params", &tabParamBadgeEnabled, &tabParamCountBadge);
+        _tabs->addTab(ICON_FA_LIST "  headers", &tabHeaderBadgeEnabled, &tabHeaderCountBadge);
+        _tabs->addTab(ICON_FA_COOKIE_BITE "  cookies", &tabCookieBadgeEnabled, &tabCookieCountBadge);
+        _tabs->addTab(ICON_FA_CODE "  body");
     }
 
     DetailedRequestViewUi::~DetailedRequestViewUi()
@@ -108,7 +109,7 @@ namespace avUi
             avR::AvRequest *displayReq = this->shared_state->display_request;
             if (!displayReq)
             {
-                const char *msg = "No request selected";
+                const char *msg = ICON_FA_INBOX "  No request selected";
                 const ImVec2 avail = ImGui::GetContentRegionAvail();
                 const ImVec2 sz = ImGui::CalcTextSize(msg);
                 ImGui::SetCursorPos(ImVec2((avail.x - sz.x) * .5f, (avail.y - sz.y) * .5f));
@@ -253,7 +254,7 @@ namespace avUi
         ImGui::SameLine();
         const bool in_flight = this->pending_response_v2.valid();
         ImGui::BeginDisabled(in_flight);
-        if (ImGui::Button(in_flight ? "Sending..." : "Send"))
+        if (ImGui::Button(in_flight ? ICON_FA_HOURGLASS_HALF " Sending..." : ICON_FA_PAPER_PLANE " Send"))
         {
             this->send_request();
         }
@@ -267,8 +268,8 @@ namespace avUi
         if (this->shared_state->display_request->pending_save)
         {
             ImGui::SameLine();
-            ImGui::TextUnformatted("*");
-            ImGui::SetItemTooltip("press ctrl+s to save");
+            ImGui::TextUnformatted(ICON_FA_CIRCLE_DOT);
+            ImGui::SetItemTooltip("unsaved changes - press ctrl+s to save");
         }
     }
     void DetailedRequestViewUi::render_main_content(const ImGuiStyle &imstyle)
@@ -385,14 +386,14 @@ namespace avUi
     {
         if (this->pending_response_v2.valid())
         {
-            ImGui::TextDisabled("Sending request...");
+            ImGui::TextDisabled(ICON_FA_HOURGLASS_HALF "  Sending request...");
             return;
         }
 
         if (this->shared_state->display_request->last_result.body.empty() &&
             this->shared_state->display_request->last_result.http_code == 0)
         {
-            ImGui::TextDisabled("No response yet - press Send to run the request.");
+            ImGui::TextDisabled(ICON_FA_INBOX "  No response yet - press Send to run the request.");
             return;
         }
 
@@ -402,7 +403,7 @@ namespace avUi
         this->shared_state->display_request->status_code = this->shared_state->display_request->last_result.http_code;
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextColored(statusColor, "%s",
+        ImGui::TextColored(statusColor, "%s  %s", ok ? ICON_FA_CIRCLE_CHECK : ICON_FA_TRIANGLE_EXCLAMATION,
                            avNet::NetworkManager::status_text(this->shared_state->display_request->last_result.status));
         ImGui::SameLine();
         ImGui::TextDisabled("HTTP %ld", this->shared_state->display_request->last_result.http_code);
@@ -414,21 +415,21 @@ namespace avUi
         ImGui::SameLine();
         ImGui::Spacing();
         ImGui::SameLine();
-        if (ImGui::Button("copy"))
+        if (ImGui::Button(ICON_FA_COPY "  copy"))
             ImGui::OpenPopup("##copy_options");
         if (ImGui::BeginPopup("##copy_options"))
         {
-            if (ImGui::Selectable("copy req as curl"))
+            if (ImGui::Selectable(ICON_FA_TERMINAL "  copy req as curl"))
                 ImGui::SetClipboardText(format_as_curl(this->shared_state->display_request->last_request).c_str());
-            if (ImGui::Selectable("copy raw response"))
+            if (ImGui::Selectable(ICON_FA_FILE_LINES "  copy raw response"))
                 ImGui::SetClipboardText(this->shared_state->display_request->last_result.body.c_str());
-            if (ImGui::Selectable("copy request url"))
+            if (ImGui::Selectable(ICON_FA_LINK "  copy request url"))
                 ImGui::SetClipboardText(this->shared_state->display_request->last_request.url.c_str());
             ImGui::EndPopup();
         }
 
         ImGui::SameLine();
-        ImGui::Text("%lld ms",
+        ImGui::Text(ICON_FA_CLOCK "  %lld ms",
                     static_cast<long long>(this->shared_state->display_request->last_result.elapsed_mc / 1000));
 
         ImGui::Separator();
@@ -470,17 +471,17 @@ namespace avUi
         const avR::AvRequest *rp = this->shared_state->display_request;
         if (json)
         {
-            mode_tab("Tree", ResponseView::tree);
+            mode_tab(ICON_FA_SITEMAP "  Tree", ResponseView::tree);
             ImGui::SameLine();
-            mode_tab("Pretty", ResponseView::pretty);
+            mode_tab(ICON_FA_CODE "  Pretty", ResponseView::pretty);
         }
         ImGui::SameLine();
-        mode_tab("Raw", ResponseView::raw);
+        mode_tab(ICON_FA_FILE_LINES "  Raw", ResponseView::raw);
         ImGui::SameLine();
-        mode_tab("Response Headers", ResponseView::res_headers,
+        mode_tab(ICON_FA_LIST "  Response Headers", ResponseView::res_headers,
                  static_cast<unsigned short>(rp->last_result.response_headers.size()));
         ImGui::SameLine();
-        mode_tab("Response Cookies", ResponseView::res_cookies,
+        mode_tab(ICON_FA_COOKIE_BITE "  Response Cookies", ResponseView::res_cookies,
                  static_cast<unsigned short>(rp->last_result.response_cookies.size()));
         if (this->response_view == ResponseView::res_headers)
         {
@@ -722,14 +723,15 @@ namespace avUi
                 if (ImGui::Checkbox("##included", &item.included))
                     this->shared_state->display_request->pending_save = true;
                 ImGui::TableNextColumn();
-                if (ImGui::Button("x"))
+                if (ImGui::Button(ICON_FA_XMARK))
                     pendingParamDel = item.id;
+                ImGui::SetItemTooltip("remove param");
                 ImGui::PopID();
             }
             ImGui::EndTable();
         }
 
-        if (ImGui::Button("add param"))
+        if (ImGui::Button(ICON_FA_PLUS " add param"))
         {
             this->shared_state->display_request->params.push_back(
                 avR::AvRequestParam{.request_id = this->shared_state->display_request->id});
@@ -738,10 +740,10 @@ namespace avUi
 
         if (pendingParamDel.has_value())
         {
-            const int64_t id = pendingParamDel.value();
-            this->request_params_storage->del(id);
+            const int64_t ppd = pendingParamDel.value();
+            this->request_params_storage->del(ppd);
             std::erase_if(this->shared_state->display_request->params,
-                          [id](avR::AvRequestParam &p) { return p.id == id; });
+                          [ppd](avR::AvRequestParam &p) { return p.id == ppd; });
             pendingParamDel.reset();
         }
 
@@ -756,8 +758,8 @@ namespace avUi
     }
     void DetailedRequestViewUi::render_tab_headers() const
     {
-        avR::UiScopedStyle style;
-        style.color(ImGuiCol_Button, tableXButtonColor);
+        avR::UiScopedStyle scstyle;
+        scstyle.color(ImGuiCol_Button, tableXButtonColor);
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchSame;
@@ -790,15 +792,16 @@ namespace avUi
                     this->shared_state->display_request->pending_save = true;
 
                 ImGui::TableNextColumn();
-                if (ImGui::Button("x"))
+                if (ImGui::Button(ICON_FA_XMARK))
                     pendingHeaderDel = header.id;
+                ImGui::SetItemTooltip("remove header");
                 ImGui::PopID();
             }
 
             ImGui::EndTable();
         }
 
-        if (ImGui::Button("add header"))
+        if (ImGui::Button(ICON_FA_PLUS "  add header"))
         {
             this->shared_state->display_request->headers.push_back(
                 avR::AvRequestHeader{avR::AvRequestParam{.request_id = this->shared_state->display_request->id}});
@@ -857,14 +860,15 @@ namespace avUi
                     this->shared_state->display_request->pending_save = true;
 
                 ImGui::TableNextColumn();
-                if (ImGui::Button("x"))
+                if (ImGui::Button(ICON_FA_XMARK))
                     pendingCookieDel = cookie.id;
+                ImGui::SetItemTooltip("remove cookie");
                 ImGui::PopID();
             }
             ImGui::EndTable();
         }
 
-        if (ImGui::Button("add cookie"))
+        if (ImGui::Button(ICON_FA_PLUS "  add cookie"))
         {
             this->shared_state->display_request->cookies.push_back(
                 avR::AvRequestCookie{avR::AvRequestParam{.request_id = this->shared_state->display_request->id}});
@@ -890,6 +894,9 @@ namespace avUi
         if (ImGui::BeginPopupModal("shortcuts", &switchShortcuts,
                                    ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration))
         {
+            ImGui::TextDisabled(ICON_FA_KEYBOARD "  shortcuts");
+            ImGui::Separator();
+            ImGui::Spacing();
             ImGui::BeginTable("table_shortcuts", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg);
             ImGui::TableSetupColumn("action", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("binding", ImGuiTableColumnFlags_WidthFixed);
@@ -912,8 +919,9 @@ namespace avUi
             }
 
             ImGui::Spacing();
-            ImGui::TextDisabled("saved:");
+            ImGui::TextDisabled(ICON_FA_DATABASE "  saved:");
             ImGui::SameLine();
+            // the link label doubles as the path handed to the shell, so the icon stays out of it
             std::string dbPath{this->request_storage->get_db_path()};
             if (ImGui::TextLink(dbPath.c_str()))
             {
@@ -935,12 +943,12 @@ namespace avUi
         {
             if (ImGui::BeginMenu("actions"))
             {
-                if (ImGui::MenuItem("new request", "ctrl + n"))
+                if (ImGui::MenuItem(ICON_FA_FILE_CIRCLE_PLUS "  new request", "ctrl + n"))
                 {
                     this->shared_state->on_new_request.value()();
                 }
 
-                if (ImGui::MenuItem("save", "ctrl + s"))
+                if (ImGui::MenuItem(ICON_FA_FLOPPY_DISK "  save", "ctrl + s"))
                 {
                     this->shared_state->on_save_changes.value()();
                 }
@@ -949,12 +957,12 @@ namespace avUi
 
             if (ImGui::BeginMenu("help"))
             {
-                if (ImGui::MenuItem("shortcuts", "ctrl + /"))
+                if (ImGui::MenuItem(ICON_FA_KEYBOARD "  shortcuts", "ctrl + /"))
                 {
                     this->shared_state->on_show_shortcuts.value()();
                 }
 
-                if (ImGui::MenuItem("style editor", "ctrl + e"))
+                if (ImGui::MenuItem(ICON_FA_PALETTE "  style editor", "ctrl + e"))
                 {
                     this->shared_state->on_show_style_editor.value()();
                 }
