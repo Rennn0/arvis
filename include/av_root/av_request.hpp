@@ -35,7 +35,7 @@ namespace avR
         std::string key;
         std::string value;
     };
-    
+
     struct AvEnvironment
     {
         int64_t id = 0;
@@ -51,7 +51,7 @@ namespace avR
         int64_t timestamp = 0;
         int64_t order_by = 0;
         avNet::request_method method = avNet::request_method::get;
-        std::string url = "https://example.com";
+        std::string url = "https://jsonplaceholder.typicode.com/todos";
         std::vector<AvRequestParam> params;
         std::vector<AvRequestHeader> headers;
         std::vector<AvRequestCookie> cookies;
