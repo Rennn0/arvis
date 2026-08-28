@@ -13,16 +13,16 @@
   "C_Cpp.formatting": "clangFormat",
   "C_Cpp.clang_format_style": "file",
   "C_Cpp.clang_format_sortIncludes": false,
-  "files.exclude": {
-    "**/.git": true,
-    "**/.vs": true,
-    "**/.idea": true,
-    "external": true,
-    "vcpkg_installed": true,
-    "build": true,
-    "out": true,
-    "**/CMakeFiles": true
-  },
+  // "files.exclude": {
+  //   "**/.git": true,
+  //   "**/.vs": true,
+  //   "**/.idea": true,
+  //   "external": true,
+  //   "vcpkg_installed": true,
+  //   "build": true,
+  //   "out": true,
+  //   "**/CMakeFiles": true
+  // },
   "search.exclude": {
     "external": true,
     "vcpkg_installed": true,
