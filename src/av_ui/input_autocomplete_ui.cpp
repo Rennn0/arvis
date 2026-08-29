@@ -12,6 +12,7 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/range/iterator_range_core.hpp>
 #include <boost/range/algorithm/find_if.hpp>
+#include <cstdlib>
 
 namespace avUi
 {
@@ -31,7 +32,7 @@ namespace avUi
                  ImGuiInputTextFlags_CallbackHistory;
         const bool changed = ImGui::InputText(label, str, flags, &internal::callback, &state);
         const std::string_view tooltip = *str;
-        ImGui::SetItemTooltip(resolve_vars(tooltip.data(), variables).c_str());
+        ImGui::SetItemTooltip("%s", resolve_vars(tooltip.data(), variables).c_str());
         const ImVec2 itemMin = ImGui::GetItemRectMin();
         const ImVec2 itemMax = ImGui::GetItemRectMax();
         const bool active = ImGui::IsItemActive();
