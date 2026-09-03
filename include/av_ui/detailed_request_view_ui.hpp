@@ -63,6 +63,17 @@ namespace avUi
         // pretty dump. Held by pointer so its (heavy) JSON header stays out of this header.
         std::unique_ptr<JsonTreeView> json_view;
 
+        // history: the snapshot captured for the send currently in flight. It is pushed
+        // into the origin's recent_reqs only once the response lands (poll_response), so a
+        // history entry always carries its own status/body instead of an empty one. The
+        // origin is remembered by id, not by pointer, so deleting it mid-flight is safe.
+        std::shared_ptr<avR::AvRequest> pending_snapshot;
+        int64_t pending_snapshot_origin_id = 0;
+        // set instead of pending_snapshot when an edited history entry is being re-sent: the
+        // result updates that entry in place rather than appending another. Strong reference,
+        // so trimming or clearing history while the fetch is in flight cannot free it.
+        std::shared_ptr<avR::AvRequest> pending_replay_target;
+
         // std::future<avNet::response_status> pending_response;
         std::future<avNet::http_result> pending_response_v2;
 
@@ -76,6 +87,12 @@ namespace avUi
 
         void save_state_change() const;
         void save_changes();
+
+        /// @brief the saved request with this id, or nullptr. Used to route a landed
+        ///        response back to the request that was actually sent.
+        avR::AvRequest *find_saved_request(int64_t id) const;
+        /// @brief drop the oldest snapshots beyond shared_state->recent_req_limit
+        void trim_history(avR::AvRequest *origin) const;
 
         static std::string build_url(std::string_view base_url, const std::vector<avR::AvRequestParam> &params);
 

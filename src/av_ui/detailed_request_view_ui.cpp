@@ -22,6 +22,18 @@ namespace avUi
     int tabHeaderCountBadge = 0;
     int tabCookieCountBadge = 0;
 
+    /// @brief Next synthetic row id for an editable history snapshot. Rows on a snapshot are
+    ///        addressed by distinct *negative* ids: SQLite rowids are always positive, so a
+    ///        negative id can never reach a persisted row, and staying distinct keeps the
+    ///        id-based row erase from removing every row at once (a shared 0 would).
+    template <typename T> static int64_t next_scratch_row_id(const std::vector<T> &rows)
+    {
+        int64_t lowest = 0;
+        for (const T &row : rows)
+            lowest = std::min(lowest, row.id);
+        return lowest - 1;
+    }
+
     EnvVars envVars;
     void load_env_vars(avR::AvEnvironment *env)
     {
@@ -52,15 +64,23 @@ namespace avUi
         this->shared_state->on_display_request_change.emplace(
             [this]()
             {
-                if (!this->shared_state->display_request)
+                avR::AvRequest *shown = this->shared_state->display_request;
+                if (!shown)
                     return;
 
-                int64_t id = this->shared_state->display_request->id;
-                this->shared_state->display_request->params = this->request_params_storage->select_by_req_id(id);
-                this->shared_state->display_request->headers = this->request_headers_storage->select_by_req_id(id);
-                this->shared_state->display_request->cookies = this->request_cookies_storage->select_by_req_id(id);
+                // A history snapshot is self-contained and owns no DB row: it must never be
+                // refreshed from storage. Reloading by id here (a snapshot used to carry the
+                // origin's id) is what made a snapshot display the saved request's *current*
+                // params/headers/cookies instead of the ones it captured at send time.
+                if (!shown->is_recent)
+                {
+                    const int64_t id = shown->id;
+                    shown->params = this->request_params_storage->select_by_req_id(id);
+                    shown->headers = this->request_headers_storage->select_by_req_id(id);
+                    shown->cookies = this->request_cookies_storage->select_by_req_id(id);
+                }
 
-                this->json_view->set_source(this->shared_state->display_request->last_result.body);
+                this->json_view->set_source(shown->last_result.body);
                 this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
             });
 
@@ -106,6 +126,13 @@ namespace avUi
         if (ImGui::Begin(this->get_id().c_str(), &this->shared_state->show_req_detailed_view, this->window_flags))
         {
             this->shared_state->shortcutManager.process();
+
+            // pick up a completed request once per frame so the header (button state) and
+            // footer (response) agree within the same frame. Runs before the "nothing
+            // selected" early-out: the response must still be routed to the request that
+            // was sent even if the user cleared the selection while it was in flight.
+            this->poll_response();
+
             avR::AvRequest *displayReq = this->shared_state->display_request;
             if (!displayReq)
             {
@@ -119,9 +146,6 @@ namespace avUi
             }
 
             this->render_menu();
-            // pick up a completed request once per frame so the header (button state) and
-            // footer (response) agree within the same frame.
-            this->poll_response();
 
             const ImGuiStyle &imstyle = ImGui::GetStyle();
             const ImVec2 availRegion = ImGui::GetContentRegionAvail();
@@ -207,6 +231,11 @@ namespace avUi
         if (!req.title.has_value())
             req.title.emplace(req.display_name());
 
+        // A history snapshot is an editable replay scratch pad: it can be modified and sent
+        // again, but it owns no DB row, so nothing about it is ever persisted and the saved
+        // request it was taken from is never touched.
+        const bool scratch = req.is_recent;
+
         const float rowH = ImGui::GetFrameHeight();
         const float availH = ImGui::GetContentRegionAvail().y;
         if (availH > rowH)
@@ -214,6 +243,7 @@ namespace avUi
 
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 20.f);
         ImGui::AlignTextToFramePadding();
+
         ImGui::PushStyleColor(ImGuiCol_Text, this->get_method_color(req.method));
         const char *current = avNet::NetworkManager::method_text(req.method);
         ImGui::SetNextItemWidth(ImGui::CalcTextSize(current).x + style.FramePadding.x * 2.0f + ImGui::GetFrameHeight());
@@ -265,7 +295,16 @@ namespace avUi
         ImGui::SameLine();
         ImGui::TextDisabled("%s", this->root.timestamp_to_date(req.timestamp).c_str());
 
-        if (this->shared_state->display_request->pending_save)
+        if (scratch)
+        {
+            ImGui::SameLine();
+            avR::UiScopedStyle chip;
+            chip.color(ImGuiCol_Text, ImVec4(0.62f, 0.68f, 0.78f, 1.0f));
+            ImGui::TextUnformatted(ICON_FA_CLOCK_ROTATE_LEFT "  history");
+            ImGui::SetItemTooltip("snapshot of a past send - editable and re-sendable, but never "
+                                  "saved, and independent of the request it came from");
+        }
+        else if (req.pending_save)
         {
             ImGui::SameLine();
             ImGui::TextUnformatted(ICON_FA_CIRCLE_DOT);
@@ -276,6 +315,10 @@ namespace avUi
     {
         this->_tabs->draw();
         ImGui::Spacing();
+
+        // Snapshots are editable here. What keeps their edits off the origin's DB rows is not
+        // a disabled flag but their ids: make_snapshot rewrites every row id to a distinct
+        // negative value, and the delete paths below skip storage entirely for a snapshot.
         switch (this->_tabs->getActiveTab())
         {
         case 0:
@@ -517,7 +560,13 @@ namespace avUi
 
         avR::AvRequest *req = this->shared_state->display_request;
         req->timestamp = this->root.get_timestamp();
-        req->pending_save = true;
+
+        // A snapshot can be edited and sent again. Re-running one updates that history entry
+        // in place instead of appending another, so replaying an entry does not breed a new
+        // one on every send; and it is never marked dirty, since it has nothing to save to.
+        const bool replay = req->is_recent;
+        if (!replay)
+            req->pending_save = true;
 
         // params are the source of truth for the query string: assemble the final url from
         // them, reflect it back into the editable url, and persist.
@@ -548,32 +597,115 @@ namespace avUi
 
         // keep an independent copy of exactly what we send so the footer can reproduce it
         // (copy as cURL, etc.) without touching the worker's moved-in copy.
-        this->shared_state->display_request->last_request = request;
+        req->last_request = request;
+
+        if (replay)
+        {
+            // Re-running a history entry: the result goes back into that same entry. It is
+            // held by shared_ptr so trimming or clearing history mid-flight cannot free it
+            // under us. select_snapshot is the only way a snapshot reaches display_request,
+            // and it always sets display_request_hold, so this is the owning reference.
+            this->pending_replay_target = this->shared_state->display_request_hold;
+            this->pending_snapshot.reset();
+            this->pending_snapshot_origin_id = 0;
+        }
+        else
+        {
+            // Capture the history entry for this send. make_snapshot deep-copies the payload
+            // and severs every link to the origin (id 0, its own snapshot_id, distinct
+            // negative row ids, no nested history) - a plain `AvRequest tmp = *req` shares the
+            // origin's id, which is what coupled the two. It is *held* here rather than
+            // pushed, and lands in the tree in poll_response once there is a real response.
+            this->pending_snapshot = avR::make_snapshot(*req, ++this->shared_state->recent_req_seq);
+            this->pending_snapshot->last_request = request; // before `request` is moved below
+            this->pending_snapshot_origin_id = req->id;
+            this->pending_replay_target.reset();
+        }
 
         // reset the destination on the UI thread before the worker starts writing to it.
         // std::launch::async establishes a happens-before with the worker; the UI thread only
         // reads response_body / response_http_code again after the future is ready (poll_response).
-        this->shared_state->display_request->last_result.body.clear();
-        this->shared_state->display_request->last_result.http_code = 0;
+        req->last_result.body.clear();
+        req->last_result.http_code = 0;
 
         // run off the UI thread so a slow/dead endpoint never freezes the window.
         /*this->pending_response*/ this->pending_response_v2 = std::async(
             std::launch::async, [this, request = std::move(request)]() { return this->network_manager.send(request); });
     }
 
+    avR::AvRequest *DetailedRequestViewUi::find_saved_request(int64_t id) const
+    {
+        if (id == 0 || !this->shared_state->request_list_state)
+            return nullptr;
+
+        for (const std::shared_ptr<avR::AvRequest> &req : this->shared_state->request_list_state->requests)
+        {
+            if (req->id == id)
+                return req.get();
+        }
+        return nullptr;
+    }
+
+    void DetailedRequestViewUi::trim_history(avR::AvRequest *origin) const
+    {
+        const size_t limit = this->shared_state->recent_req_limit;
+        if (limit == 0 || origin->recent_reqs.size() <= limit)
+            return;
+
+        // Dropping the oldest entries destroys their shared_ptr. A snapshot the user is
+        // currently looking at survives it because AvInterViewSharedState::display_request_hold
+        // holds a strong reference for as long as display_request points at it.
+        const size_t drop = origin->recent_reqs.size() - limit;
+        origin->recent_reqs.erase(origin->recent_reqs.begin(),
+                                  origin->recent_reqs.begin() + static_cast<std::ptrdiff_t>(drop));
+    }
+
     void DetailedRequestViewUi::poll_response()
     {
-        if (this->pending_response_v2.valid() &&
-            this->pending_response_v2.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        if (!this->pending_response_v2.valid() ||
+            this->pending_response_v2.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            return;
+
+        const avNet::http_result result = this->pending_response_v2.get();
+
+        // Replay of an edited history entry: the result updates that entry in place.
+        if (this->pending_replay_target)
         {
-            // this->shared_state->display_request->last_status = this->pending_response.get();
+            this->pending_replay_target->last_result = result;
+            this->pending_replay_target->status_code = static_cast<int>(result.http_code);
+            this->pending_replay_target->timestamp = this->root.get_timestamp();
+            this->pending_replay_target.reset();
+        }
 
-            // // parse the body once, here, rather than every frame in th e footer. Default to the
-            // // tree view when it is JSON, otherwise fall back to the raw text view.
-            // this->json_view->set_source(this->shared_state->display_request->last_response_body);
-            // this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
+        // The response belongs to the request that was *sent*, not to whatever is on screen
+        // now - the user may have selected another entry (or a snapshot) while it was in
+        // flight. Look the origin up by id so a delete mid-flight cannot dangle.
+        avR::AvRequest *origin = this->find_saved_request(this->pending_snapshot_origin_id);
+        if (origin)
+        {
+            origin->last_result = result;
+            origin->status_code = static_cast<int>(result.http_code);
+        }
 
-            this->shared_state->display_request->last_result = this->pending_response_v2.get();
+        // The snapshot gets its own copy of the result. Independent on purpose: the next send
+        // clears origin->last_result, which would otherwise blank out the history entry.
+        if (this->pending_snapshot)
+        {
+            this->pending_snapshot->last_result = result;
+            this->pending_snapshot->status_code = static_cast<int>(result.http_code);
+            this->pending_snapshot->timestamp = this->root.get_timestamp();
+
+            if (origin)
+            {
+                origin->recent_reqs.push_back(std::move(this->pending_snapshot));
+                this->trim_history(origin);
+            }
+            this->pending_snapshot.reset();
+        }
+        this->pending_snapshot_origin_id = 0;
+
+        if (this->shared_state->display_request)
+        {
             this->json_view->set_source(this->shared_state->display_request->last_result.body);
             this->response_view = this->json_view->is_json() ? ResponseView::tree : ResponseView::raw;
         }
@@ -581,19 +713,40 @@ namespace avUi
 
     void DetailedRequestViewUi::save_state_change() const
     {
-        this->request_storage->upsert(this->shared_state->display_request);
+        avR::AvRequest *shown = this->shared_state->display_request;
+        if (!shown)
+            return;
+
+        // A snapshot owns no DB row, so it can never be dirty either - clearing the flag
+        // stops the params tab from re-running build_url every frame on an edit that will
+        // never be saved (and stops the "unsaved changes" marker from sticking forever).
+        if (shown->is_recent)
+        {
+            shown->pending_save = false;
+            return;
+        }
+
+        this->request_storage->upsert(shown);
     }
 
     void DetailedRequestViewUi::save_changes()
     {
-        if (!this->shared_state->display_request)
+        avR::AvRequest *shown = this->shared_state->display_request;
+        if (!shown)
             return;
 
-        this->request_storage->upsert(this->shared_state->display_request);
-        this->request_params_storage->upsert(this->shared_state->display_request->params);
-        this->request_headers_storage->upsert(this->shared_state->display_request->headers);
-        this->request_cookies_storage->upsert(this->shared_state->display_request->cookies);
-        this->shared_state->display_request->pending_save = false;
+        // ctrl+s on a snapshot is deliberately a no-op: its edits are scratch by design.
+        if (shown->is_recent)
+        {
+            shown->pending_save = false;
+            return;
+        }
+
+        this->request_storage->upsert(shown);
+        this->request_params_storage->upsert(shown->params);
+        this->request_headers_storage->upsert(shown->headers);
+        this->request_cookies_storage->upsert(shown->cookies);
+        shown->pending_save = false;
     }
 
     // percent-encode per RFC 3986: unreserved chars pass through, everything else -> %XX
@@ -733,17 +886,22 @@ namespace avUi
 
         if (ImGui::Button(ICON_FA_PLUS " add param"))
         {
-            this->shared_state->display_request->params.push_back(
-                avR::AvRequestParam{.request_id = this->shared_state->display_request->id});
-            this->shared_state->display_request->pending_save = true;
+            avR::AvRequest *req = this->shared_state->display_request;
+            avR::AvRequestParam row{.request_id = req->id};
+            if (req->is_recent)
+                row.id = next_scratch_row_id(req->params);
+            req->params.push_back(row);
+            req->pending_save = true;
         }
 
         if (pendingParamDel.has_value())
         {
             const int64_t ppd = pendingParamDel.value();
-            this->request_params_storage->del(ppd);
-            std::erase_if(this->shared_state->display_request->params,
-                          [ppd](avR::AvRequestParam &p) { return p.id == ppd; });
+            avR::AvRequest *req = this->shared_state->display_request;
+            // a snapshot's rows are scratch (negative ids) - there is no DB row to delete
+            if (!req->is_recent)
+                this->request_params_storage->del(ppd);
+            std::erase_if(req->params, [ppd](const avR::AvRequestParam &p) { return p.id == ppd; });
             pendingParamDel.reset();
         }
 
@@ -803,17 +961,22 @@ namespace avUi
 
         if (ImGui::Button(ICON_FA_PLUS "  add header"))
         {
-            this->shared_state->display_request->headers.push_back(
-                avR::AvRequestHeader{avR::AvRequestParam{.request_id = this->shared_state->display_request->id}});
-            this->shared_state->display_request->pending_save = true;
+            avR::AvRequest *req = this->shared_state->display_request;
+            avR::AvRequestHeader row{avR::AvRequestParam{.request_id = req->id}};
+            if (req->is_recent)
+                row.id = next_scratch_row_id(req->headers);
+            req->headers.push_back(row);
+            req->pending_save = true;
         }
 
         if (pendingHeaderDel.has_value())
         {
-            const int64_t id = pendingHeaderDel.value();
-            this->request_headers_storage->del(id);
-            std::erase_if(this->shared_state->display_request->headers,
-                          [id](avR::AvRequestParam &p) { return p.id == id; });
+            const int64_t phd = pendingHeaderDel.value();
+            avR::AvRequest *req = this->shared_state->display_request;
+            // a snapshot's rows are scratch (negative ids) - there is no DB row to delete
+            if (!req->is_recent)
+                this->request_headers_storage->del(phd);
+            std::erase_if(req->headers, [phd](const avR::AvRequestParam &h) { return h.id == phd; });
             pendingHeaderDel.reset();
         }
     }
@@ -870,17 +1033,22 @@ namespace avUi
 
         if (ImGui::Button(ICON_FA_PLUS "  add cookie"))
         {
-            this->shared_state->display_request->cookies.push_back(
-                avR::AvRequestCookie{avR::AvRequestParam{.request_id = this->shared_state->display_request->id}});
-            this->shared_state->display_request->pending_save = true;
+            avR::AvRequest *req = this->shared_state->display_request;
+            avR::AvRequestCookie row{avR::AvRequestParam{.request_id = req->id}};
+            if (req->is_recent)
+                row.id = next_scratch_row_id(req->cookies);
+            req->cookies.push_back(row);
+            req->pending_save = true;
         }
 
         if (pendingCookieDel.has_value())
         {
-            const int64_t id = pendingCookieDel.value();
-            this->request_cookies_storage->del(id);
-            std::erase_if(this->shared_state->display_request->cookies,
-                          [id](avR::AvRequestParam &p) { return p.id == id; });
+            const int64_t pcd = pendingCookieDel.value();
+            avR::AvRequest *req = this->shared_state->display_request;
+            // a snapshot's rows are scratch (negative ids) - there is no DB row to delete
+            if (!req->is_recent)
+                this->request_cookies_storage->del(pcd);
+            std::erase_if(req->cookies, [pcd](const avR::AvRequestParam &c) { return c.id == pcd; });
             pendingCookieDel.reset();
         }
     }
