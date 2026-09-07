@@ -470,6 +470,34 @@ namespace avUi
         // #TODO add collection here
         const avR::AvRequest *selected = this->shared_state->display_request;
 
+        if (!this->filter_text.empty())
+        {
+            ImGui::Dummy(ImVec2(0.0f, 5.0f));
+            auto filtered_requests = this->request_list_state->requests |
+                                     std::views::filter(
+                                         [this](const std::shared_ptr<avR::AvRequest> &req)
+                                         {
+                                             return req->display_name().find(this->filter_text) != std::string::npos ||
+                                                    req->url.find(this->filter_text) != std::string::npos;
+                                         });
+            if (!filtered_requests.empty())
+            {
+                for (auto &request : filtered_requests)
+                {
+                    this->render_request_row(selected, request.get(), imstyle);
+                }
+            }
+            else
+            {
+                const char *msg = "Not found.";
+                const float text_w = ImGui::CalcTextSize(msg).x;
+                const float avail_w = ImGui::GetContentRegionAvail().x;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail_w - text_w) * 0.5f);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetTextLineHeightWithSpacing()); // top margin
+                ImGui::TextDisabled("%s", msg);
+            }
+            return;
+        }
         auto todaysRequests =
             this->request_list_state->requests | std::views::filter([this](const std::shared_ptr<avR::AvRequest> &req)
                                                                     { return root.is_today(req->timestamp); });
