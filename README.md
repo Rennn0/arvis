@@ -24,6 +24,15 @@
 
 ![highlights](assets/arv_highlights.gif)
 
+## Contributors
+
+<a href="https://github.com/Rennn0">
+  <img src="https://github.com/Rennn0.png" width="50px;" alt="Luka"/>
+</a>
+<a href="https://github.com/johndoe">
+  <img src="https://github.com/JumpToSkyFree.png" width="50px;" alt="John Doe"/>
+</a>
+
 ## Small on purpose
 
 arvis is a native binary — no Chromium, no Node runtime, no per-tab renderer
