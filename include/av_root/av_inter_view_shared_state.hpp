@@ -22,7 +22,20 @@ namespace avR
         const float _left_panel_ratio = .2f;
         const float _min_left_panel_width = 180.f;
 
+        /// monotonic source of AvRequest::snapshot_id. Never reset, so a snapshot id is
+        /// unique for the lifetime of the process. (Was recent_req_counter, which doubled
+        /// as the history badge count and so went stale on every removal - the badge is
+        /// now derived from the actual snapshot vectors.)
+        int64_t recent_req_seq = 0;
+        /// how many snapshots one saved request keeps before the oldest is dropped
+        size_t recent_req_limit = 25;
+
         AvRequest *display_request;
+        /// Keeps a selected history snapshot alive while `display_request` points at it.
+        /// Snapshots live in AvRequest::recent_reqs, which history trimming, "clear" and
+        /// deleting the origin all shrink underneath the raw pointer. Empty whenever a
+        /// saved request is selected - those are owned by AvRequestListState::requests.
+        std::shared_ptr<AvRequest> display_request_hold;
         avR::AvRequestListState *request_list_state;
         std::shared_ptr<avR::AvAppSettings> app_settings;
         std::optional<std::function<void()>> on_display_request_change;
